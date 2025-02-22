@@ -1,0 +1,52 @@
+import { HTMLAttributes, useEffect, useRef, useState } from "react";
+import { Stage, StageProps } from "react-konva";
+
+export const ResponsiveStage = ({
+  width: virtualWidth = 0,
+  height: virtualHeight = 0,
+  scaleX = 1,
+  scaleY = 1,
+  children,
+  ...otherProps
+}: StageProps & HTMLAttributes<HTMLDivElement>) => {
+  const [responsiveScale, setResponsiveScale] = useState({
+    x: 1,
+    y: 1,
+  });
+  const stageContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const stageContainer = stageContainerRef.current;
+      if (stageContainer) {
+        const { offsetWidth } = stageContainer;
+        const responsiveScaleX = offsetWidth / (virtualWidth ?? 1);
+        setResponsiveScale({
+          x: responsiveScaleX,
+          y: responsiveScaleX,
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [virtualHeight, virtualWidth]);
+
+  return (
+    <div ref={stageContainerRef} {...otherProps}>
+      <Stage
+        className="mx-auto w-min"
+        width={scaleX * responsiveScale.x * (virtualWidth ?? 0)}
+        height={scaleY * responsiveScale.y * (virtualHeight ?? 0)}
+        scaleX={scaleX * responsiveScale.x}
+        scaleY={scaleY * responsiveScale.y}
+      >
+        {children}
+      </Stage>
+    </div>
+  );
+};
