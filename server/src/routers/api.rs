@@ -55,7 +55,7 @@ async fn post_led(
     Path(id): Path<usize>,
     Form(color): Form<Color>,
 ) -> Result<(), LedRouterError> {
-    leds.set(id, Led { color }).await.map_err(|err| match err {
+    leds.set(id, color).await.map_err(|err| match err {
         LedRepoError::OutOfBounds(id) => LedRouterError::NotFound(id),
     })?;
 
@@ -82,6 +82,27 @@ impl From<Color> for [u8; 3] {
     fn from(value: Color) -> Self { [value.red, value.green, value.blue] }
 }
 
+impl From<Led> for [u8; 11] {
+    fn from(value: Led) -> Self {
+        let color: [u8; 3] = value.color.into();
+        let last_updated = value.last_updated.timestamp().to_be_bytes();
+
+        [
+            color[0],
+            color[1],
+            color[2],
+            last_updated[0],
+            last_updated[1],
+            last_updated[2],
+            last_updated[3],
+            last_updated[4],
+            last_updated[5],
+            last_updated[6],
+            last_updated[7],
+        ]
+    }
+}
+
 async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
     loop {
         if let Some(Ok(message)) = rx.next().await {
@@ -93,14 +114,7 @@ async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
                         let green = bytes[3];
                         let blue = bytes[4];
 
-                        let _ = leds
-                            .set(
-                                id,
-                                Led {
-                                    color: Color { red, green, blue },
-                                },
-                            )
-                            .await;
+                        let _ = leds.set(id, Color { red, green, blue }).await;
                     }
                 }
                 Message::Close(_) => break,
@@ -120,7 +134,7 @@ async fn tx_handler(mut tx: SplitSink<WebSocket, Message>, leds: LedRepo) {
                     snapshot
                         .leds
                         .into_iter()
-                        .flat_map(|led| <[u8; 3]>::from(led.color))
+                        .flat_map(<[u8; 11]>::from)
                         .collect(),
                 ))
                 .await;

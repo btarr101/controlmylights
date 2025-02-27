@@ -27,20 +27,20 @@ export const App = () => {
     <MouseProvider>
       <EaselProvider
         initialActiveSplotchIndex={savedEasel.activeSplotchIndex}
-        initialColors={savedEasel.colors.map((color) => new Color(color))}
+        initialColors={savedEasel.colors.map((hex) => new Color(hex))}
       >
         <EaselSaver />
-        <div
-          className="flex flex-col min-h-screen min-w-sm pattern-rectangles pattern-stone-600 pattern-bg-stone-700 
-  pattern-size-6 pattern-opacity-100"
-        >
+        <div className="flex flex-col min-h-screen min-w-sm">
+          <header className="text-center py-8 text-2xl">
+            Control My Lights
+          </header>
           <div className="max-w-2xl container mx-auto flex flex-col justify-evenly items-center flex-1 gap-4 my-2">
-            <ApiProvider>
-              <LedProvier>
+            <LedProvier>
+              <ApiProvider>
                 <LedSyncer />
-                <LedCanvas />
-              </LedProvier>
-            </ApiProvider>
+              </ApiProvider>
+              <LedCanvas />
+            </LedProvier>
             <LedEasel />
           </div>
         </div>

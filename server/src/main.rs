@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use axum::Router;
 use controlmylights::{repo::led::LedRepo, routers::api, state::AppState, types::Color};
-use tower_http::services::ServeDir;
+use tower_http::{
+    cors::{AllowMethods, AllowOrigin, CorsLayer},
+    services::ServeDir,
+};
 
 #[shuttle_runtime::main]
 async fn main() -> shuttle_axum::ShuttleAxum {
@@ -17,8 +20,12 @@ async fn main() -> shuttle_axum::ShuttleAxum {
 
     let state = AppState { leds };
 
+    let cors = CorsLayer::new()
+        .allow_methods(AllowMethods::any())
+        .allow_origin(AllowOrigin::any());
+
     let router = Router::new()
-        .nest("/api", api::get_router())
+        .nest("/api", api::get_router().layer(cors))
         .with_state(state)
         .fallback_service(ServeDir::new(manifest_dir.join("public")));
 

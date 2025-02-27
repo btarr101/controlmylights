@@ -27,66 +27,73 @@ export const LedCanvas = () => {
     canvasWidth - ledSize - ledHorizontalSpacing * (horizontalLeds - 1);
   const unusedHeight =
     canvasHeight - ledSize - ledVerticalSpacing * (verticalLeds - 1);
+
   return (
-    <div className="w-full border-white border-3 rounded-xl bg-stone-800 shadow-lg">
+    <div className="w-full border-1 bg-[url(/room.jpg)] bg-cover bg-center">
       <ResponsiveStage
         width={canvasWidth}
         height={canvasHeight}
         className="w-full max-w-8xl mx-auto"
       >
         <Layer name="glow-layer" />
+        <Layer name="outline-layer" />
         <Layer>
-          <Group>
-            {[...Array(horizontalLeds - 1)].map((_, index) => (
-              <LedButton
-                key={index}
-                index={index}
-                size={ledSize}
-                x={(index + 1) * ledHorizontalSpacing + unusedWidth / 2}
-                y={unusedHeight / 2}
-              />
-            ))}
-            {[...Array(verticalLeds - 1)].map((_, index) => (
-              <LedButton
-                key={index}
-                index={index + horizontalLeds - 1}
-                size={ledSize}
-                x={canvasWidth - ledSize - unusedWidth / 2}
-                y={(index + 1) * ledVerticalSpacing + unusedHeight / 2}
-              />
-            ))}
-            {[...Array(horizontalLeds - 1)].map((_, index) => (
-              <LedButton
-                key={index}
-                index={index + horizontalLeds + verticalLeds - 2}
-                size={ledSize}
-                x={
-                  canvasWidth -
-                  ledSize -
-                  (index + 1) * ledHorizontalSpacing -
-                  unusedWidth / 2
-                }
-                y={canvasHeight - ledSize - unusedHeight / 2}
-              />
-            ))}
-            {[...Array(verticalLeds - 1)].map((_, index) => (
-              <LedButton
-                key={index}
-                index={
-                  index + horizontalLeds + verticalLeds + horizontalLeds - 3
-                }
-                size={ledSize}
-                x={unusedWidth / 2}
-                y={
-                  canvasHeight -
-                  ledSize -
-                  (index + 1) * ledVerticalSpacing -
-                  unusedHeight / 2
-                }
-              />
-            ))}
-            <Group name="hue-group" globalCompositeOperation="source-atop" />
-          </Group>
+          {[...Array(horizontalLeds - 1)].map((_, index) => (
+            <LedButton
+              key={index}
+              index={index}
+              size={ledSize}
+              x={(index + 1) * ledHorizontalSpacing + unusedWidth / 2}
+              y={unusedHeight / 2}
+            />
+          ))}
+          {[...Array(verticalLeds - 1)].map((_, index) => (
+            <LedButton
+              key={index}
+              index={index + horizontalLeds - 1}
+              size={ledSize}
+              x={canvasWidth - ledSize - unusedWidth / 2}
+              y={(index + 1) * ledVerticalSpacing + unusedHeight / 2}
+            />
+          ))}
+          {[...Array(horizontalLeds - 1)].map((_, index) => (
+            <LedButton
+              key={index}
+              index={index + horizontalLeds + verticalLeds - 2}
+              size={ledSize}
+              x={
+                canvasWidth -
+                ledSize -
+                (index + 1) * ledHorizontalSpacing -
+                unusedWidth / 2
+              }
+              y={canvasHeight - ledSize - unusedHeight / 2}
+            />
+          ))}
+          {[...Array(verticalLeds - 1)].map((_, index) => (
+            <LedButton
+              key={index}
+              index={index + horizontalLeds + verticalLeds + horizontalLeds - 3}
+              size={ledSize}
+              x={unusedWidth / 2}
+              y={
+                canvasHeight -
+                ledSize -
+                (index + 1) * ledVerticalSpacing -
+                unusedHeight / 2
+              }
+            />
+          ))}
+          <Group
+            name="hue-group"
+            globalCompositeOperation="source-atop"
+            opacity={0.5}
+          />
+          <Group
+            name="top-group"
+            globalCompositeOperation="source-over"
+            opacity={0.5}
+          />
         </Layer>
       </ResponsiveStage>
     </div>
@@ -118,6 +125,7 @@ const LedButton = ({
     return { led, ledHex, lightness };
   }, [leds, index]);
 
+  const ref = useRef<Konva.Circle>(null);
   const glowCircleRef = useRef<Konva.Circle>(null);
 
   const handlePaintStart = useCallback(() => {
@@ -132,6 +140,32 @@ const LedButton = ({
     }
   }, [handlePaintStart, leftHeld]);
 
+  const handleMouseEnter = useCallback(
+    (event: Konva.KonvaEventObject<MouseEvent>) => {
+      handlePaint();
+
+      const container = event.target.getStage()?.container();
+      if (container) {
+        container.style.cursor = "pointer";
+      }
+    },
+    [handlePaint]
+  );
+
+  const handleMouseLeave = useCallback(
+    (event: Konva.KonvaEventObject<MouseEvent>) => {
+      const container = event.target.getStage()?.container();
+      if (container) {
+        container.style.cursor = "default";
+      }
+    },
+    []
+  );
+
+  const handleMouseDown = useCallback(() => {
+    handlePaintStart();
+  }, [handlePaintStart]);
+
   const [previousHex, setPreviousHex] = useState<string>();
   useEffect(() => {
     const baseRadius = (size / 2.0) * Math.pow(lightness, 0.5);
@@ -140,13 +174,13 @@ const LedButton = ({
       const glowCircle = glowCircleRef.current;
       if (glowCircle) {
         glowCircle.to({
-          width: baseRadius * 4,
-          height: baseRadius * 4,
-          duration: 0,
+          width: baseRadius * 6,
+          height: baseRadius * 6,
+          duration: 0.1,
           onFinish: () =>
             glowCircle.to({
-              width: baseRadius * 2,
-              height: baseRadius * 2,
+              width: baseRadius * 4,
+              height: baseRadius * 4,
               duration: 0.3,
             }),
         });
@@ -174,6 +208,20 @@ const LedButton = ({
           shadowColor={ledHex}
         />
       </Portal>
+      <Portal selector=".outline-layer">
+        <Image
+          image={lightBulbImage}
+          width={size + 2}
+          height={size + 2}
+          x={-size}
+          y={-size}
+          shadowOffsetX={x - 1 + size}
+          shadowOffsetY={y - 1 + size}
+          shadowColor="black"
+          opacity={1.0}
+          shadowBlur={0.0}
+        />
+      </Portal>
       <Image image={lightBulbImage} width={size} height={size} x={x} y={y} />
       <Portal selector=".hue-group">
         <Rect
@@ -182,8 +230,19 @@ const LedButton = ({
           height={size}
           x={x}
           y={y}
-          onMouseDown={handlePaintStart}
-          onMouseEnter={handlePaint}
+        />
+      </Portal>
+      <Portal selector=".top-group">
+        <Circle
+          ref={ref}
+          stroke={"ff0000"}
+          strokeWidth={0}
+          x={x + size / 2}
+          y={y + size / 2}
+          radius={size / 1.5}
+          onMouseDown={handleMouseDown}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           onTouchStart={handlePaintStart}
           onPointerEnter={handlePaint}
         />

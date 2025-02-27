@@ -3,6 +3,7 @@ use std::sync::{
     Arc,
 };
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -11,6 +12,7 @@ use crate::types::Color;
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Led {
     pub color: Color,
+    pub last_updated: DateTime<Utc>,
 }
 
 pub struct LedRepoSnapshot {
@@ -34,12 +36,17 @@ pub enum LedRepoError {
 
 impl LedRepo {
     pub fn new(initial_colors: impl IntoIterator<Item = Color>) -> Self {
+        let now = Utc::now();
+
         Self(Arc::new(LedRepoInner {
             generation: 0.into(),
             leds: RwLock::new(
                 initial_colors
                     .into_iter()
-                    .map(|color| Led { color })
+                    .map(|color| Led {
+                        color,
+                        last_updated: now,
+                    })
                     .collect(),
             ),
         }))
@@ -47,11 +54,12 @@ impl LedRepo {
 
     pub async fn get(&self, id: usize) -> Option<Led> { self.0.leds.read().await.get(id).cloned() }
 
-    pub async fn set(&self, id: usize, led: Led) -> Result<(), LedRepoError> {
+    pub async fn set(&self, id: usize, color: Color) -> Result<(), LedRepoError> {
         let mut lock = self.0.leds.write().await;
         let current_led = lock.get_mut(id).ok_or(LedRepoError::OutOfBounds(id))?;
 
-        *current_led = led;
+        current_led.color = color;
+        current_led.last_updated = Utc::now();
 
         self.0.generation.fetch_add(1, Ordering::AcqRel);
 
