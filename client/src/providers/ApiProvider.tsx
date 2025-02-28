@@ -18,6 +18,11 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
 
         const parsedFetchedLeds = _.chunk(array, 11).map(
           ([red, green, blue, ...timestampBytes]) => {
+            // ---------------------------------------------------------
+            // |  Byte 0  |  Byte 1  |  Byte 2  |   Byte 3 - Byte 10   |
+            // ---------------------------------------------------------
+            // |    R     |    G     |    B     |      Timestamp       |
+            // ---------------------------------------------------------
             const dataView = new DataView(
               new Uint8Array(timestampBytes).buffer
             );
@@ -44,6 +49,11 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
     () =>
       ({
         updateLed: ({ id, color }) => {
+          // ------------------------------------------------------
+          // |  Byte 0 - Byte 1  |  Byte 2  |  Byte 3  |  Byte 4  |
+          // ------------------------------------------------------
+          // |       Index       |    R     |    G     |    B     |
+          // ------------------------------------------------------
           const [red, green, blue] = color.getRGB() as [number, number, number];
           const low = id & 0xff;
           const high = (id >> 8) & 0xff;

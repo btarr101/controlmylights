@@ -15,6 +15,7 @@ pub struct Led {
     pub last_updated: DateTime<Utc>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct LedRepoSnapshot {
     pub generation: usize,
     pub leds: Vec<Led>,
@@ -73,5 +74,17 @@ impl LedRepo {
             generation: self.generation(),
             leds: self.0.leds.read().await.clone(),
         }
+    }
+}
+
+impl From<LedRepoSnapshot> for LedRepo {
+    fn from(value: LedRepoSnapshot) -> Self {
+        let generation = value.generation;
+        let leds = value.leds;
+
+        Self(Arc::new(LedRepoInner {
+            generation: generation.into(),
+            leds: RwLock::new(leds),
+        }))
     }
 }
