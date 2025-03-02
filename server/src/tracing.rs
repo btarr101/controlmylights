@@ -19,7 +19,7 @@ pub fn build_grafana_layer(
     let basic_auth = BASE64_STANDARD.encode(format!("{username}:{password}").as_bytes());
 
     tracing_loki::builder()
-        .label("application", "controlmylights")?
+        .label("application", env!("CARGO_CRATE_NAME"))?
         .label("stage", stage)?
         .http_header("Authorization", format!("Basic {basic_auth}"))?
         .build_url(host)

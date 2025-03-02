@@ -16,6 +16,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use tokio::{spawn, time::sleep};
+use tracing::{info, instrument};
 
 use crate::{
     repo::led::{Led, LedRepo, LedRepoError},
@@ -103,9 +104,11 @@ impl From<Led> for [u8; 11] {
     }
 }
 
+#[instrument(skip_all)]
 async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
     loop {
         if let Some(Ok(message)) = rx.next().await {
+            info!("Received message: {:?}", message);
             match message {
                 Message::Binary(bytes) => {
                     if bytes.len() >= 5 {
@@ -124,6 +127,7 @@ async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
     }
 }
 
+#[instrument(skip_all)]
 async fn tx_handler(mut tx: SplitSink<WebSocket, Message>, leds: LedRepo) {
     let mut latest_generation = 0;
     loop {
@@ -139,6 +143,7 @@ async fn tx_handler(mut tx: SplitSink<WebSocket, Message>, leds: LedRepo) {
                 ))
                 .await;
             latest_generation = snapshot.generation;
+            info!("Sent snapshot with generation {}", latest_generation);
         }
 
         sleep(Duration::from_millis(100)).await;

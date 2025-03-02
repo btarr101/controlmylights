@@ -11,8 +11,6 @@ fn build_client_app() -> anyhow::Result<()> {
     let workspace_root = root.parent().expect("parent");
     let client_root = workspace_root.join("client");
 
-    cargo_emit::rerun_if_changed!(client_root.to_string_lossy());
-
     let public = root.join("public");
     let build = client_root.join("dist");
 

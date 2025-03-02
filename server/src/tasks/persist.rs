@@ -1,7 +1,9 @@
 use shuttle_shared_db::SerdeJsonOperator;
+use tracing::instrument;
 
 use crate::repo::led::LedRepo;
 
+#[instrument(skip_all)]
 pub async fn persist(leds: LedRepo, operator: SerdeJsonOperator) {
     let mut previous_generation = leds.generation();
     loop {
@@ -19,10 +21,10 @@ pub async fn persist(leds: LedRepo, operator: SerdeJsonOperator) {
             .await
         {
             Ok(_) => {
-                println!("Persisted snapshot");
+                tracing::info!("Persisted snapshot");
             }
             Err(err) => {
-                eprintln!("Failed to persist snapshot: {}", err);
+                tracing::error!("Failed to persist snapshot: {}", err);
             }
         }
     }

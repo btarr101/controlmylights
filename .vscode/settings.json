@@ -1,0 +1,4 @@
+{
+	// Build script is only used to build frontend application
+	"rust-analyzer.cargo.buildScripts.enable": false
+}

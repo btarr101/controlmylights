@@ -6,6 +6,7 @@ use std::sync::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+use tracing::instrument;
 
 use crate::types::Color;
 
@@ -55,6 +56,7 @@ impl LedRepo {
 
     pub async fn get(&self, id: usize) -> Option<Led> { self.0.leds.read().await.get(id).cloned() }
 
+    #[instrument(skip(self))]
     pub async fn set(&self, id: usize, color: Color) -> Result<(), LedRepoError> {
         let mut lock = self.0.leds.write().await;
         let current_led = lock.get_mut(id).ok_or(LedRepoError::OutOfBounds(id))?;
@@ -62,7 +64,9 @@ impl LedRepo {
         current_led.color = color;
         current_led.last_updated = Utc::now();
 
-        self.0.generation.fetch_add(1, Ordering::AcqRel);
+        let previous_generation = self.0.generation.fetch_add(1, Ordering::AcqRel);
+
+        tracing::info!("Led updated (previous generation was {previous_generation})!");
 
         Ok(())
     }
