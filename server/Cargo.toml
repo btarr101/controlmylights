@@ -11,6 +11,11 @@ base64 = "0.22.1"
 chrono = "0.4.40"
 futures = "0.3.31"
 multiple_errors = "1.1.0"
+opentelemetry = "0.28.0"
+opentelemetry-appender-tracing = "0.28.1"
+opentelemetry-otlp = "0.28.0"
+opentelemetry-stdout = "0.28.0"
+opentelemetry_sdk = "0.28.0"
 serde = "1.0.218"
 shuttle-axum = "0.52.0"
 shuttle-runtime = { version = "0.52.0", default-features = false }
@@ -18,14 +23,14 @@ shuttle-shared-db = { version = "0.52.0", features = [
 	"postgres",
 	"opendal-postgres",
 ] }
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 tokio = "1.28.2"
 tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = "0.1.41"
-tracing-loki = "0.2.6"
+tracing-opentelemetry = "0.29.0"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
 uuid = "1.15.1"
 
 [build-dependencies]
 cargo-emit = "0.2.1"
-anyhow = "1.0.96"
+anyhow = "1.0.97"

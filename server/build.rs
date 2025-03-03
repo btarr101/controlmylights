@@ -1,9 +1,11 @@
 use std::{fs, path::Path, process::Command};
 
 fn main() {
-    // if let Err(err) = build_client_app() {
-    //     cargo_emit::warning!("Client app build failed: {}", err);
-    // }
+    cargo_emit::rerun_if_changed!("../client");
+
+    if let Err(err) = build_client_app() {
+        cargo_emit::warning!("Client app build failed: {}", err);
+    }
 }
 
 fn build_client_app() -> anyhow::Result<()> {

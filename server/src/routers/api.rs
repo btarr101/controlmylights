@@ -104,48 +104,83 @@ impl From<Led> for [u8; 11] {
     }
 }
 
-#[instrument(skip_all)]
 async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
     loop {
         if let Some(Ok(message)) = rx.next().await {
-            info!("Received message: {:?}", message);
-            match message {
-                Message::Binary(bytes) => {
-                    if bytes.len() >= 5 {
-                        let id = usize::from_be_bytes([0, 0, 0, 0, 0, 0, bytes[0], bytes[1]]);
-                        let red = bytes[2];
-                        let green = bytes[3];
-                        let blue = bytes[4];
-
-                        let _ = leds.set(id, Color { red, green, blue }).await;
-                    }
-                }
-                Message::Close(_) => break,
-                _ => (),
+            let handle_message_result = handle_message(message, leds.clone()).await;
+            if handle_message_result.close_handler {
+                break;
             }
         }
     }
 }
 
-#[instrument(skip_all)]
+#[derive(Debug)]
+struct HandleMessageResult {
+    close_handler: bool,
+}
+
+#[instrument(skip(leds), ret)]
+async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult {
+    info!("Received message!");
+
+    let mut close_handler = false;
+
+    match message {
+        Message::Binary(bytes) => {
+            if bytes.len() >= 5 {
+                let id = usize::from_be_bytes([0, 0, 0, 0, 0, 0, bytes[0], bytes[1]]);
+                let red = bytes[2];
+                let green = bytes[3];
+                let blue = bytes[4];
+
+                let _ = leds.set(id, Color { red, green, blue }).await;
+            }
+        }
+        Message::Close(_) => {
+            close_handler = true;
+        }
+        _ => (),
+    };
+
+    return HandleMessageResult { close_handler };
+}
+
 async fn tx_handler(mut tx: SplitSink<WebSocket, Message>, leds: LedRepo) {
     let mut latest_generation = 0;
     loop {
         if latest_generation < leds.generation() {
-            let snapshot = leds.snapshot().await;
-            let _ = tx
-                .send(Message::Binary(
-                    snapshot
-                        .leds
-                        .into_iter()
-                        .flat_map(<[u8; 11]>::from)
-                        .collect(),
-                ))
-                .await;
-            latest_generation = snapshot.generation;
-            info!("Sent snapshot with generation {}", latest_generation);
+            latest_generation = send_snapshot(&mut tx, &leds).await.generation;
         }
 
         sleep(Duration::from_millis(100)).await;
+    }
+}
+
+#[derive(Debug)]
+struct SendSnapshotResult {
+    generation: usize,
+}
+
+#[instrument(skip_all, ret)]
+async fn send_snapshot(
+    tx: &mut SplitSink<WebSocket, Message>,
+    leds: &LedRepo,
+) -> SendSnapshotResult {
+    let snapshot = leds.snapshot().await;
+    let _ = tx
+        .send(Message::Binary(
+            snapshot
+                .leds
+                .into_iter()
+                .flat_map(<[u8; 11]>::from)
+                .collect(),
+        ))
+        .await;
+
+    info!("Sent snapshot!");
+
+    SendSnapshotResult {
+        generation: snapshot.generation,
     }
 }

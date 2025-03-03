@@ -3,10 +3,11 @@ use shuttle_runtime::SecretStore;
 use tracing_loki::url::Url;
 
 pub struct Config {
+    pub service_name: &'static str,
     pub stage: &'static str,
-    pub grafana_host: Url,
-    pub grafana_username: String,
-    pub grafana_password: String,
+    pub otlp_endpoint: Url,
+    pub otlp_username: String,
+    pub otlp_password: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -21,13 +22,15 @@ impl TryFrom<&SecretStore> for Config {
     fn try_from(secret_store: &SecretStore) -> Result<Config, Self::Error> {
         return_multiple_errors!(
             let mut errors: Vec<SecretStoreObtainError> = vec![];
-            let grafana_host = secret_store.obtain("GRAFANA_HOST");
-            let grafana_username = secret_store.obtain("GRAFANA_USERNAME");
-            let grafana_password = secret_store.obtain("GRAFANA_PASSWORD");
+            let otlp_endpoint = secret_store.obtain("OTLP_ENDPOINT");
+            let otlp_username = secret_store.obtain("OTLP_USERNAME");
+            let otlp_password = secret_store.obtain("OTLP_PASSWORD");
             if_there_are_errors {
                 return Err(NewConfigError::InvalidSecrets(errors));
             }
         );
+
+        let service_name = env!("CARGO_CRATE_NAME");
 
         let stage = if cfg!(debug_assertions) {
             "dev"
@@ -36,10 +39,11 @@ impl TryFrom<&SecretStore> for Config {
         };
 
         let config = Config {
+            service_name,
             stage,
-            grafana_host,
-            grafana_username,
-            grafana_password,
+            otlp_endpoint,
+            otlp_username,
+            otlp_password,
         };
 
         Ok(config)
