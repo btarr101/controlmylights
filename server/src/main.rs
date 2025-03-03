@@ -31,7 +31,7 @@ async fn main(
     setup_tracing(TracingConfig {
         service_name: config.service_name,
         stage: config.stage,
-        otlp_endpoint: config.otlp_endpoint,
+        otlp_endpoint: &config.otlp_endpoint,
         otlp_username: &config.otlp_username,
         otlp_password: &config.otlp_password,
     })?;

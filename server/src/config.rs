@@ -1,11 +1,10 @@
 use multiple_errors::return_multiple_errors;
 use shuttle_runtime::SecretStore;
-use tracing_loki::url::Url;
 
 pub struct Config {
     pub service_name: &'static str,
     pub stage: &'static str,
-    pub otlp_endpoint: Url,
+    pub otlp_endpoint: String,
     pub otlp_username: String,
     pub otlp_password: String,
 }

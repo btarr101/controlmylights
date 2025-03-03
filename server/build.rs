@@ -1,13 +1,12 @@
 use std::{fs, path::Path, process::Command};
 
 fn main() {
-    cargo_emit::rerun_if_changed!("../client");
-
-    if let Err(err) = build_client_app() {
-        cargo_emit::warning!("Client app build failed: {}", err);
-    }
+    // if let Err(err) = build_client_app() {
+    //     cargo_emit::warning!("Client app build failed: {}", err);
+    // }
 }
 
+#[allow(dead_code)]
 fn build_client_app() -> anyhow::Result<()> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let workspace_root = root.parent().expect("parent");

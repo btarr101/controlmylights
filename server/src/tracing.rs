@@ -3,14 +3,13 @@ use std::collections::HashMap;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use opentelemetry::{trace::TracerProvider, KeyValue};
 use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
-use tracing::{level_filters::LevelFilter, span};
-use tracing_loki::url::Url;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 pub struct TracingConfig<'a> {
     pub service_name: &'static str,
     pub stage: &'static str,
-    pub otlp_endpoint: Url,
+    pub otlp_endpoint: &'a str,
     pub otlp_username: &'a str,
     pub otlp_password: &'a str,
 }
