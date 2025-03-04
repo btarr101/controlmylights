@@ -7,6 +7,7 @@ pub struct Config {
     pub otlp_endpoint: String,
     pub otlp_username: String,
     pub otlp_password: String,
+    pub ipinfo_token: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -24,6 +25,7 @@ impl TryFrom<&SecretStore> for Config {
             let otlp_endpoint = secret_store.obtain("OTLP_ENDPOINT");
             let otlp_username = secret_store.obtain("OTLP_USERNAME");
             let otlp_password = secret_store.obtain("OTLP_PASSWORD");
+            let ipinfo_token = secret_store.obtain("IPINFO_TOKEN");
             if_there_are_errors {
                 return Err(NewConfigError::InvalidSecrets(errors));
             }
@@ -43,6 +45,7 @@ impl TryFrom<&SecretStore> for Config {
             otlp_endpoint,
             otlp_username,
             otlp_password,
+            ipinfo_token,
         };
 
         Ok(config)

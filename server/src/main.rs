@@ -1,6 +1,7 @@
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
-use axum::Router;
+use axum::{extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, Router};
+use axum_client_ip::InsecureClientIp;
 use chrono::Utc;
 use controlmylights::{
     config::Config,
@@ -11,20 +12,40 @@ use controlmylights::{
     tracing::{setup_tracing, TracingConfig},
     types::Color,
 };
-use shuttle_runtime::{CustomError, SecretStore};
+use ipinfo::{IpInfo, IpInfoConfig};
+use shuttle_runtime::{CustomError, SecretStore, Service};
 use shuttle_shared_db::SerdeJsonOperator;
+use tokio::sync::{Mutex, OnceCell};
 use tower_http::{
     cors::{AllowMethods, AllowOrigin, CorsLayer},
     services::ServeDir,
-    trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
-use tracing::Level;
+use tracing::{error, info, Instrument, Level, Span};
+
+static IPINFO: OnceCell<Mutex<IpInfo>> = OnceCell::const_new(); // TODO MUTEX
+
+pub struct MyService(IntoMakeServiceWithConnectInfo<Router, SocketAddr>);
+
+#[shuttle_runtime::async_trait]
+impl Service for MyService {
+    async fn bind(mut self, addr: SocketAddr) -> Result<(), shuttle_runtime::Error> {
+        let tcp_listener = shuttle_runtime::tokio::net::TcpListener::bind(addr)
+            .await
+            .map_err(|err| shuttle_runtime::Error::BindPanic(err.to_string()))?;
+        axum::serve(tcp_listener, self.0)
+            .await
+            .map_err(CustomError::new)?;
+
+        Ok(())
+    }
+}
 
 #[shuttle_runtime::main]
 async fn main(
     #[shuttle_runtime::Secrets] secret_store: SecretStore,
     #[shuttle_shared_db::Postgres] operator: SerdeJsonOperator,
-) -> shuttle_axum::ShuttleAxum {
+) -> Result<MyService, shuttle_runtime::Error> {
     let config = Config::try_from(&secret_store)
         .map_err(|err| shuttle_runtime::Error::Custom(CustomError::new(err)))?;
 
@@ -35,6 +56,16 @@ async fn main(
         otlp_username: &config.otlp_username,
         otlp_password: &config.otlp_password,
     })?;
+
+    let ipinfo_config = IpInfoConfig {
+        token: Some(config.ipinfo_token),
+        ..Default::default()
+    };
+    let _ = IPINFO.set(
+        IpInfo::new(ipinfo_config)
+            .map_err(shuttle_runtime::CustomError::new)?
+            .into(),
+    );
 
     let snapshot = operator
         .read_serialized("snapshot")
@@ -71,7 +102,7 @@ async fn main(
         .with_state(state)
         .fallback_service(ServeDir::new(manifest_dir.join("public")));
 
-    Ok(router
+    let service = router
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(
@@ -79,8 +110,37 @@ async fn main(
                         .include_headers(true)
                         .level(Level::INFO),
                 )
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
+                .on_request(move |request: &Request<axum::body::Body>, _span: &Span| {
+                    info!("started processing request");
+
+                    let ip_result = InsecureClientIp::from(request.headers(), request.extensions());
+                    if let Ok(InsecureClientIp(ip)) = ip_result {
+                        info!("Extracted ip: {}", ip);
+
+                        tokio::task::spawn(
+                            async move {
+                                let lookup = {
+                                    IPINFO
+                                        .get()
+                                        .expect("oncecell set")
+                                        .lock()
+                                        .await
+                                        .lookup(&ip.to_string())
+                                        .await
+                                };
+
+                                match lookup {
+                                    Ok(details) => info!("Looked up '{}': {:?}", ip, details),
+                                    Err(err) => error!("Failed to look up ip '{}': {}", ip, err),
+                                }
+                            }
+                            .instrument(Span::current()),
+                        );
+                    };
+                })
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
         )
-        .into())
+        .into_make_service_with_connect_info::<SocketAddr>();
+
+    Ok(MyService(service))
 }
