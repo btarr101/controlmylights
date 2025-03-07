@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"name": "controlmylights",
+			"path": "."
+		},
+		{
+			"name": "client",
+			"path": "client"
+		},
+		{
+			"name": "server",
+			"path": "server"
+		},
+		{
+			"name": "arduino_client",
+			"path": "arduino_client"
+		}
+	],
+}
