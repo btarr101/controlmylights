@@ -12,7 +12,7 @@ enum Opcode {
 
 struct Payload {
 	Opcode opcode;
-	byte* bytes;
+	const byte* data;
 	size_t length;
 };
 
@@ -43,11 +43,26 @@ public:
 	/// @return If the frame was sent successfully.
 	bool ping();
 
-	bool update(); // TODO
+	/// @brief Updates the state of this websocket and handles sending keepalive pong
+	/// messages as well as receiving payloads.
+	/// @return if a new payload was received
+	bool poll(); // TODO
 
+	/// @brief Gets the latest payload received by this client.
+	/// @return Payload data.
 	Payload getLatestPayload(); // TODO
 
 private:
 	WiFiSSLClient m_wifiClient;
 	Status m_status = Status::DISCONNECTED;
+	unsigned long m_lastPing = 0;
+
+	bool m_receivedPayloadFin;
+	Opcode m_receivedPayloadOpcode;
+	bool m_receivedPayloadMask;
+	uint16_t m_receivedPayloadLength;
+	byte m_receivedPayloadData[750];
+
+	bool m_maskingKeyRead = false;
+	byte m_receivedPayloadMaskingKey[4];
 };
