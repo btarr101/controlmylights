@@ -1,11 +1,13 @@
 #include "WsClient.h"
+#include <ArduinoLog.h>
 #include <base64.hpp>
 
 constexpr const uint8_t SEC_WEBSOCKET_KEY_LENGTH = 16;
 constexpr const uint8_t SEC_WEBSOCKET_KEY_BASE64_MAX_LENGTH((SEC_WEBSOCKET_KEY_LENGTH + 2) / 3 * 4);
+constexpr unsigned long PING_INTERVAL = 5000;
 
 unsigned int generateSecWebsocketKey(unsigned char (&r_secWebsocketKey)[SEC_WEBSOCKET_KEY_BASE64_MAX_LENGTH + 1]);
-void sendOpeningHandshake(WiFiSSLClient& wifiClient, const char* t_host, const char* t_path, const char* secWebsocketKey);
+void sendOpeningHandshake(MyWifiClient& wifiClient, const char* t_host, const char* t_path, const char* secWebsocketKey);
 
 WsClient::WsClient()
 {
@@ -13,16 +15,24 @@ WsClient::WsClient()
 
 void WsClient::connect(const char* t_host, uint16_t t_port, const char* t_path = "/")
 {
+	Log.traceln("[WsClient] Attempting to connect to '%s:%d%s'", t_host, t_port, t_path);
+
 	disconnect();
 
 	if (!m_wifiClient.connect(t_host, t_port)) {
+		Log.errorln("[WsClient] Failed to connect");
 		return;
 	}
+
+	Log.traceln("[WsClient] Connected!");
 
 	unsigned char secWebsocketKey[SEC_WEBSOCKET_KEY_BASE64_MAX_LENGTH + 1]; // +1 for null terminator
 	generateSecWebsocketKey(secWebsocketKey);
 
 	sendOpeningHandshake(m_wifiClient, t_host, t_path, (char*)secWebsocketKey);
+
+	Log.traceln("[WsClient] Sent opening handshake");
+
 	m_status = Status::CONNECTING;
 }
 
@@ -42,7 +52,7 @@ unsigned int generateSecWebsocketKey(unsigned char (&r_secWebsocketKey)[SEC_WEBS
 	return encode_base64(randomBytes, SEC_WEBSOCKET_KEY_LENGTH, r_secWebsocketKey);
 }
 
-void sendOpeningHandshake(WiFiSSLClient& wifiClient, const char* t_host, const char* t_path, const char* secWebsocketKey)
+void sendOpeningHandshake(MyWifiClient& wifiClient, const char* t_host, const char* t_path, const char* secWebsocketKey)
 {
 	wifiClient.print("GET ");
 	wifiClient.print(t_path);
@@ -79,6 +89,7 @@ bool WsClient::getConnected()
 size_t WsClient::send(Opcode t_opcode, const byte* t_bytes, uint8_t t_length)
 {
 	if (!getConnected()) {
+		Log.errorln("[WsClient] Attempted to send payload while not connected (status=%d)", m_status);
 		return 0;
 	}
 
@@ -106,7 +117,11 @@ size_t WsClient::send(Opcode t_opcode, const byte* t_bytes, uint8_t t_length)
 	}
 
 	// 6 bc/ 1 byte FIN + OPCODE, 1 byte mask and length, 4 bytes masking key
-	return m_wifiClient.write(frame, 6 + t_length);
+	size_t sentBytes = m_wifiClient.write(frame, 6 + t_length);
+
+	Log.traceln("[WsClient] Sent payload (opcode=%X, size=%d)", t_opcode, sentBytes);
+
+	return sentBytes;
 }
 
 bool WsClient::ping()
@@ -119,6 +134,7 @@ bool WsClient::poll()
 	// If the wifi client is not connected, ensure the state of this client
 	// reflects that.
 	if (!m_wifiClient.connected()) {
+		Log.errorln("[WsClient] WiFi client disconnected, setting status to %d", Status::DISCONNECTED);
 		disconnect();
 	}
 
@@ -130,10 +146,11 @@ bool WsClient::poll()
 			m_receivedPayloadData[bytesRead] = '\0';
 		}
 
-		// We don;t actually care what we get, just as soon as we finish reading all the bloat
+		// We don't actually care what we get, just as soon as we finish reading all the bloat
 		// we assume we are connected.
 		if (strcmp((char*)m_receivedPayloadData, "\r") == 0) {
 			m_status = Status::WAITING;
+			Log.infoln("[WsClient] Upgrade payload line received! Status set to %d", m_status);
 		} else {
 			break;
 		}
@@ -141,7 +158,8 @@ bool WsClient::poll()
 		// Keepalive
 		{
 			unsigned long currentMillis = millis();
-			if (currentMillis - m_lastPing > 50) {
+			if (currentMillis - m_lastPing > PING_INTERVAL) {
+				Log.infoln("[WsClient] Sending ping");
 				ping();
 				m_lastPing = currentMillis;
 			}
@@ -161,6 +179,18 @@ bool WsClient::poll()
 			m_receivedPayloadMask = (maskAndLength & 0x80) != 0;
 			m_receivedPayloadLength = maskAndLength & 0x7F;
 
+			m_receivedPayloadTraceId = random();
+			m_handledMaskingKey = false;
+			m_payloadReadCursor = 0;
+			m_payloadReadAttempts = 0;
+
+			Log.traceln(
+				"[WsClient] (id=%d) Received payload (fin=%d,opcode=%X,length=%d)",
+				m_receivedPayloadTraceId,
+				m_receivedPayloadFin,
+				m_receivedPayloadOpcode,
+				m_receivedPayloadLength);
+
 			m_status = Status::RECEIVING;
 		} else {
 			break;
@@ -170,43 +200,98 @@ bool WsClient::poll()
 		// -- If we were good little programemers we would also make sure the opcode lines up... but meh. Let's
 		//    just let a 300 byte PONG break things maybe.
 		if (m_receivedPayloadLength == 126) {
+
+			Log.traceln("[WsClient] (id=%d) Handling extended length", m_receivedPayloadTraceId);
+
 			if (m_wifiClient.available() >= 2) {
 				byte extendedLength[2];
 				m_wifiClient.read(extendedLength, sizeof(extendedLength));
 				m_receivedPayloadLength = (extendedLength[0] << 8) | extendedLength[1];
+
+				Log.traceln(
+					"[WsClient] (id=%d) Extended length is %d",
+					m_receivedPayloadTraceId,
+					m_receivedPayloadLength);
 			} else {
+				delay(100);
 				break;
 			}
 		}
 
 		// Read masking key
-		if (m_receivedPayloadMask && !m_maskingKeyRead) {
-			if (m_wifiClient.available() >= 4) {
-				m_wifiClient.read(m_receivedPayloadMaskingKey, 4);
-				m_maskingKeyRead = true;
+		if (!m_handledMaskingKey) {
+			if (m_receivedPayloadMask) {
+
+				Log.traceln("[WsClient] (id=%d) Attempting to read masking key", m_receivedPayloadTraceId);
+
+				if (m_wifiClient.available() >= 4) {
+					m_wifiClient.read(m_receivedPayloadMaskingKey, 4);
+
+					Log.traceln("[WsClient] (id=%d) Masking key read", m_receivedPayloadTraceId);
+
+					m_handledMaskingKey = true;
+				} else {
+					break;
+				}
 			} else {
-				break;
+				Log.traceln("[WsClient] (id=%d) No masking key, skipping", m_receivedPayloadTraceId);
+
+				m_handledMaskingKey = true;
 			}
 		}
 
-		// Read and potentially unmask payload
-		if (m_wifiClient.available() >= m_receivedPayloadLength) {
-			m_wifiClient.read(m_receivedPayloadData, m_receivedPayloadLength);
-			if (m_receivedPayloadMask) {
-				for (int i = 0; i < m_receivedPayloadLength; i++) {
-					m_receivedPayloadData[i] ^= m_receivedPayloadMaskingKey[i % 4];
+		if (m_receivedPayloadLength) {
+			size_t available = m_wifiClient.available();
+
+			Log.traceln(
+				"[WsClient] (id=%d) Attempting to read into payload (length=%d, available=%d)",
+				m_receivedPayloadTraceId,
+				m_receivedPayloadLength,
+				available);
+
+			if (available) {
+				m_payloadReadAttempts = 0;
+
+				size_t payloadLeft = m_receivedPayloadLength - m_payloadReadCursor;
+				size_t availableInPayload = min(payloadLeft, available);
+
+				m_wifiClient.read(&m_receivedPayloadData[m_payloadReadCursor], availableInPayload);
+				m_payloadReadCursor += availableInPayload;
+
+				Log.traceln(
+					"[WsClient] (id=%d) Read %d / %d bytes into payload",
+					m_receivedPayloadTraceId,
+					m_payloadReadCursor,
+					m_receivedPayloadLength);
+
+				if (m_payloadReadCursor == m_receivedPayloadLength) {
+					Log.traceln("[WsClient] (id=%d) Finished reading payload", m_receivedPayloadTraceId);
+
+					m_status = Status::WAITING;
+
+					// we do NOT call update() here again, because we want to give the consumer
+					// a chance to do something with this payload rather than potentially immediately overwriting it with
+					// another payload.
+
+					return true;
+				}
+			} else {
+				m_payloadReadAttempts++;
+				Log.warningln("[WsClient] (id=%d) Failed to read any payload data (attempt %d)", m_receivedPayloadTraceId, m_payloadReadAttempts);
+				delay(100);
+
+				if (m_payloadReadAttempts >= 10) {
+					Log.errorln("[WsClient] (id=%d) Failed to read payload after %d attempts. Disconnecting...", m_receivedPayloadTraceId, m_payloadReadAttempts);
+					m_wifiClient.flush();
+					m_status = Status::DISCONNECTED;
+					break;
 				}
 			}
-
-			m_status = Status::WAITING;
-			// we do NOT call update() here again, because we want to give the consumer
-			// a chance to do something with this payload rather than potentially immediately overwriting it with
-			// another payload.
-
-			return true;
 		} else {
-			break;
+			m_status = Status::WAITING;
+			return true;
 		}
+		break;
 	case Status::DISCONNECTED:
 		break;
 	}

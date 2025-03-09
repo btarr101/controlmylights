@@ -17,4 +17,12 @@
 			"path": "arduino_client"
 		}
 	],
+	"settings": {
+		"files.associations": {
+			"*.css": "css",
+			"*.html": "jinja-html",
+			"istream": "cpp",
+			"*.tcc": "cpp"
+		}
+	},
 }

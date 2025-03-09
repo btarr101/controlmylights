@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = { version = "0.8.1", features = ["ws"] }
+axum = { version = "0.8.1", features = ["ws", "query"] }
 axum-client-ip = "0.7.0"
 axum-macros = "0.5.0"
 axum_thiserror = "0.1.0"
@@ -26,7 +26,7 @@ shuttle-shared-db = { version = "0.52.0", features = [
 	"opendal-postgres",
 ] }
 thiserror = "2.0.12"
-tokio = "1.28.2"
+tokio = "1.44.0"
 tower-http = { version = "0.6.2", features = ["fs", "trace", "cors"] }
 tracing = "0.1.41"
 tracing-opentelemetry = "0.29.0"

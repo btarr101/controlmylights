@@ -1,9 +1,10 @@
 use std::time::Duration;
 
 use axum::{
+    body::Bytes,
     extract::{
         ws::{Message, WebSocket},
-        Path, State, WebSocketUpgrade,
+        Path, Query, State, WebSocketUpgrade,
     },
     http::StatusCode,
     response::IntoResponse,
@@ -15,8 +16,9 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use serde::Deserialize;
 use tokio::{spawn, time::sleep};
-use tracing::{info, instrument};
+use tracing::info;
 
 use crate::{
     repo::led::{Led, LedRepo, LedRepoError},
@@ -63,13 +65,26 @@ async fn post_led(
     Ok(())
 }
 
-async fn get_ws(State(leds): State<LedRepo>, ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(|ws| {
-        Box::pin(async {
+#[derive(Deserialize)]
+struct WsQueryParams {
+    colors_only: Option<bool>,
+    snapshot_interval: Option<u64>,
+}
+
+async fn get_ws(
+    State(leds): State<LedRepo>,
+    Query(ws_query): Query<WsQueryParams>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    let colors_only = matches!(ws_query.colors_only, Some(true));
+    let snapshot_interval = ws_query.snapshot_interval.unwrap_or(100);
+
+    ws.on_upgrade(move |ws| {
+        Box::pin(async move {
             let (tx, rx) = ws.split();
 
             let mut rx_task = spawn(rx_handler(rx, leds.clone()));
-            let mut tx_task = spawn(tx_handler(tx, leds));
+            let mut tx_task = spawn(tx_handler(tx, leds, colors_only, snapshot_interval));
 
             tokio::select! {
                 _ = &mut rx_task => rx_task.abort(),
@@ -120,10 +135,7 @@ struct HandleMessageResult {
     close_handler: bool,
 }
 
-#[instrument(skip(leds), ret)]
 async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult {
-    info!("Received message!");
-
     let mut close_handler = false;
 
     match message {
@@ -143,17 +155,23 @@ async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult 
         _ => (),
     };
 
-    return HandleMessageResult { close_handler };
+    HandleMessageResult { close_handler }
 }
 
-async fn tx_handler(mut tx: SplitSink<WebSocket, Message>, leds: LedRepo) {
+async fn tx_handler(
+    mut tx: SplitSink<WebSocket, Message>,
+    leds: LedRepo,
+    colors_only: bool,
+    snapshot_interval: u64,
+) {
     let mut latest_generation = 0;
     loop {
         if latest_generation < leds.generation() {
-            latest_generation = send_snapshot(&mut tx, &leds).await.generation;
+            latest_generation = send_snapshot(&mut tx, &leds, colors_only).await.generation;
+            info!("Sent snapshot: {}!", snapshot_interval);
         }
 
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(snapshot_interval)).await;
     }
 }
 
@@ -162,23 +180,19 @@ struct SendSnapshotResult {
     generation: usize,
 }
 
-#[instrument(skip_all, ret)]
 async fn send_snapshot(
     tx: &mut SplitSink<WebSocket, Message>,
     leds: &LedRepo,
+    colors_only: bool,
 ) -> SendSnapshotResult {
     let snapshot = leds.snapshot().await;
-    let _ = tx
-        .send(Message::Binary(
-            snapshot
-                .leds
-                .into_iter()
-                .flat_map(<[u8; 11]>::from)
-                .collect(),
-        ))
-        .await;
-
-    info!("Sent snapshot!");
+    let leds = snapshot.leds.into_iter();
+    let bytes: Bytes = if colors_only {
+        leds.flat_map(|led| <[u8; 3]>::from(led.color)).collect()
+    } else {
+        leds.flat_map(<[u8; 11]>::from).collect()
+    };
+    let _ = tx.send(Message::Binary(bytes)).await;
 
     SendSnapshotResult {
         generation: snapshot.generation,

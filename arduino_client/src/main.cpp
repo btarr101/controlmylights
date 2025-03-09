@@ -1,32 +1,48 @@
 #include <Arduino.h>
 #include <WsClient.h>
 
-constexpr const char* WS_HOST = "arduino-place-server-lrpx.shuttle.app";
-constexpr const int WS_PORT = 443;
-constexpr const char* WS_PATH = "/ws";
+#include "logging.h"
+#include <ArduinoLog.h>
+
+// http://0.0.0.0:8000
+constexpr const char* WS_HOST = "192.168.1.47";
+constexpr const int WS_PORT = 8000;
+constexpr const char* WS_PATH = "/api/leds/ws?colors_only=true&snapshot_interval=250";
 
 WsClient wsClient;
 
+void safeBoot();
 void setupWifi();
 
 void setup()
 {
 	Serial.begin(115200);
-	Serial.println("STARTING!!!");
+	while (!Serial && !Serial.available()) { }
+
+	setupLogging();
+	safeBoot();
 	setupWifi();
 }
 
 void loop()
 {
-	if (!wsClient.getConnected()) {
+	while (wsClient.getStatus() == WsClient::Status::DISCONNECTED) {
+		delay(1000);
 		wsClient.connect(WS_HOST, WS_PORT, WS_PATH);
 	}
 
 	bool receivedPayload = wsClient.poll();
 	if (receivedPayload) {
 		Payload payload = wsClient.getLatestPayload();
-		Serial.print("Got payload!: ");
-		Serial.println(payload.opcode);
+		Log.infoln("Received payload (opcode=%d, length=%d)", payload.opcode, payload.length);
+	}
+}
+
+void safeBoot()
+{
+	for (uint8_t t = 4; t > 0; t--) {
+		Log.infoln("[SETUP] Boot Wait (%d)", t);
+		delay(1000);
 	}
 }
 
@@ -34,25 +50,21 @@ void setupWifi()
 {
 	// check for the WiFi module:
 	if (WiFi.status() == WL_NO_MODULE) {
-		Serial.print("[Wifi]: Communication with WiFi module failed!");
+		Log.errorln("[WiFi] Communication with WiFi module failed!");
 		// don't continue
 		while (true) { }
 	}
 
 	wl_status_t wifiStatus = wl_status_t::WL_IDLE_STATUS;
 	while (wifiStatus != WL_CONNECTED) {
-		Serial.print("[Wifi]: Attempting to connect to SSID: ");
-		Serial.print(WIFI_SSID);
+		Log.infoln("[WiFi] Attempting to connect to '%s'", WIFI_SSID);
 
 		// Connect to WPA/WPA2 network. Change this line if using open or WEP network:
 		wifiStatus = (wl_status_t)WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-		delay(1000);
+		delay(500);
 	}
 
-	Serial.println("[Wifi]: Connected!");
-
 	IPAddress ip = WiFi.localIP();
-	Serial.print("[Wifi]: IP Address: ");
-	Serial.println(ip);
+	Log.infoln("[WiFi] Connected! (ip='%p')", ip);
 }

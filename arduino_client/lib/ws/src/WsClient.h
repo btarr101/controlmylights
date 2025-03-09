@@ -1,6 +1,8 @@
 #pragma once
 #include <WiFiS3.h>
 
+using MyWifiClient = WiFiClient;
+
 enum Opcode {
 	CONTINUATION = 0x0,
 	TEXT = 0x1,
@@ -46,23 +48,27 @@ public:
 	/// @brief Updates the state of this websocket and handles sending keepalive pong
 	/// messages as well as receiving payloads.
 	/// @return if a new payload was received
-	bool poll(); // TODO
+	bool poll();
 
 	/// @brief Gets the latest payload received by this client.
 	/// @return Payload data.
-	Payload getLatestPayload(); // TODO
+	Payload getLatestPayload();
 
 private:
-	WiFiSSLClient m_wifiClient;
+	MyWifiClient m_wifiClient;
 	Status m_status = Status::DISCONNECTED;
 	unsigned long m_lastPing = 0;
 
+	long m_receivedPayloadTraceId;
 	bool m_receivedPayloadFin;
 	Opcode m_receivedPayloadOpcode;
 	bool m_receivedPayloadMask;
 	uint16_t m_receivedPayloadLength;
-	byte m_receivedPayloadData[750];
+	byte m_receivedPayloadData[1024];
 
-	bool m_maskingKeyRead = false;
+	bool m_handledMaskingKey = false;
 	byte m_receivedPayloadMaskingKey[4];
+
+	size_t m_payloadReadAttempts = 0;
+	size_t m_payloadReadCursor = 0;
 };
