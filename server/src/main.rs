@@ -1,6 +1,9 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
-use axum::{extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, Router};
+use axum::{
+    extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, Extension,
+    Router,
+};
 use axum_client_ip::InsecureClientIp;
 use chrono::Utc;
 use controlmylights::{
@@ -15,7 +18,7 @@ use controlmylights::{
 use ipinfo::{IpInfo, IpInfoConfig};
 use shuttle_runtime::{CustomError, SecretStore, Service};
 use shuttle_shared_db::SerdeJsonOperator;
-use tokio::sync::{Mutex, OnceCell};
+use tokio::sync::Mutex;
 use tower_http::{
     cors::{AllowMethods, AllowOrigin, CorsLayer},
     services::ServeDir,
@@ -23,7 +26,7 @@ use tower_http::{
 };
 use tracing::{error, info, Instrument, Level, Span};
 
-static IPINFO: OnceCell<Mutex<IpInfo>> = OnceCell::const_new(); // TODO MUTEX
+// static IPINFO: OnceCell<Mutex<IpInfo>> = OnceCell::const_new();
 
 pub struct MyService(IntoMakeServiceWithConnectInfo<Router, SocketAddr>);
 
@@ -61,11 +64,9 @@ async fn main(
         token: Some(config.ipinfo_token),
         ..Default::default()
     };
-    let _ = IPINFO.set(
-        IpInfo::new(ipinfo_config)
-            .map_err(shuttle_runtime::CustomError::new)?
-            .into(),
-    );
+    let ipinfo = Arc::new(Mutex::new(
+        IpInfo::new(ipinfo_config).map_err(shuttle_runtime::CustomError::new)?,
+    ));
 
     let snapshot = operator
         .read_serialized("snapshot")
@@ -113,33 +114,33 @@ async fn main(
                 .on_request(move |request: &Request<axum::body::Body>, _span: &Span| {
                     info!("started processing request");
 
-                    let ip_result = InsecureClientIp::from(request.headers(), request.extensions());
+                    let extensions = request.extensions();
+                    let ip_result = InsecureClientIp::from(request.headers(), extensions);
+
                     if let Ok(InsecureClientIp(ip)) = ip_result {
                         info!("Extracted ip: {}", ip);
 
-                        tokio::task::spawn(
-                            async move {
-                                let lookup = {
-                                    IPINFO
-                                        .get()
-                                        .expect("oncecell set")
-                                        .lock()
-                                        .await
-                                        .lookup(&ip.to_string())
-                                        .await
-                                };
+                        let ipinfo = request.extensions().get::<Arc<Mutex<IpInfo>>>();
 
-                                match lookup {
-                                    Ok(details) => info!("Looked up '{}': {:?}", ip, details),
-                                    Err(err) => error!("Failed to look up ip '{}': {}", ip, err),
+                        if let Some(ipinfo) = ipinfo.cloned() {
+                            tokio::task::spawn(
+                                async move {
+                                    let lookup = ipinfo.lock().await.lookup(&ip.to_string()).await;
+                                    match lookup {
+                                        Ok(details) => info!("Looked up '{}': {:?}", ip, details),
+                                        Err(err) => {
+                                            error!("Failed to look up ip '{}': {}", ip, err)
+                                        }
+                                    }
                                 }
-                            }
-                            .instrument(Span::current()),
-                        );
+                                .instrument(Span::current()),
+                            );
+                        }
                     };
                 })
                 .on_response(DefaultOnResponse::new().level(Level::INFO)),
         )
+        .layer(Extension(ipinfo))
         .into_make_service_with_connect_info::<SocketAddr>();
 
     Ok(MyService(service))

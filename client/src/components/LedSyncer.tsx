@@ -66,16 +66,21 @@ const LedSyncUpdater = () => {
     }
   }, [latestFetchedLeds, leds, setColors]);
 
-  const oldColors = useRef<Color[]>([]);
+  const oldColors = useRef<Color[]>(undefined);
   useEffect(() => {
     if (leds) {
       const colors = leds.map(({ color }) => color);
+      const currentOldColors = oldColors.current;
 
-      colors.forEach((color, id) => {
-        if (color.getHex() !== oldColors.current[id]?.getHex()) {
-          updateLed({ id, color });
-        }
-      });
+      // Only calculate diff if this isn't the first render
+      if (currentOldColors !== undefined) {
+        colors.forEach((color, id) => {
+          if (color.getHex() !== currentOldColors[id]?.getHex()) {
+            console.log(color);
+            updateLed({ id, color });
+          }
+        });
+      }
 
       oldColors.current = colors;
     }

@@ -18,6 +18,7 @@ use futures::{
     SinkExt, StreamExt,
 };
 use serde::Deserialize;
+use serde_inline_default::serde_inline_default;
 use tokio::{spawn, time::sleep};
 use tracing::{error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
@@ -33,12 +34,15 @@ pub fn get_router() -> Router<AppState> {
         .route("/leds", get(get_leds))
         .route("/leds/{id}", get(get_led).post(post_led))
         .route("/leds/ws", get(get_ws))
+        .fallback(handler_404)
 }
+
+async fn handler_404() -> StatusCode { StatusCode::NOT_FOUND }
 
 #[derive(thiserror::Error, Debug, ErrorStatus)]
 pub enum LedRouterError {
     #[error("Led with id {0} does not exist")]
-    #[status(StatusCode::INTERNAL_SERVER_ERROR)]
+    #[status(StatusCode::NOT_FOUND)]
     NotFound(usize),
 }
 
@@ -67,21 +71,26 @@ async fn post_led(
     Ok(())
 }
 
+#[serde_inline_default]
 #[derive(Deserialize)]
-struct WsQueryParams {
-    colors_only: Option<bool>,
-    snapshot_interval: Option<u64>,
+struct WsParams {
+    #[serde_inline_default(false)]
+    colors_only: bool,
+    #[serde_inline_default(100)]
+    snapshot_interval: u64,
 }
 
 async fn get_ws(
     State(leds): State<LedRepo>,
-    Query(ws_query): Query<WsQueryParams>,
+    Query(WsParams {
+        colors_only,
+        snapshot_interval,
+    }): Query<WsParams>,
     InsecureClientIp(ip): InsecureClientIp,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     let ws_client_id = Uuid::new_v4();
-    let colors_only = matches!(ws_query.colors_only, Some(true));
-    let snapshot_interval = ws_query.snapshot_interval.unwrap_or(100);
+    let snapshot_interval = snapshot_interval.max(100);
 
     ws.on_upgrade(move |ws| {
         Box::pin(async move {

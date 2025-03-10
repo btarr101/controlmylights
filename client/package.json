@@ -18,6 +18,7 @@
     "react-dom": "19.0.0",
     "react-konva": "^19.0.2",
     "react-konva-utils": "^1.1.0",
+    "react-router": "^7.3.0",
     "react-use-websocket": "^4.13.0",
     "ts-color-class": "^0.10.1",
     "use-image": "^1.1.1"
