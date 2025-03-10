@@ -11,6 +11,7 @@ use axum::{
     routing::get,
     Form, Json, Router,
 };
+use axum_client_ip::InsecureClientIp;
 use axum_thiserror::ErrorStatus;
 use futures::{
     stream::{SplitSink, SplitStream},
@@ -18,7 +19,8 @@ use futures::{
 };
 use serde::Deserialize;
 use tokio::{spawn, time::sleep};
-use tracing::info;
+use tracing::{error, info, info_span, instrument, Instrument};
+use uuid::Uuid;
 
 use crate::{
     repo::led::{Led, LedRepo, LedRepoError},
@@ -74,21 +76,37 @@ struct WsQueryParams {
 async fn get_ws(
     State(leds): State<LedRepo>,
     Query(ws_query): Query<WsQueryParams>,
+    InsecureClientIp(ip): InsecureClientIp,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
+    let ws_client_id = Uuid::new_v4();
     let colors_only = matches!(ws_query.colors_only, Some(true));
     let snapshot_interval = ws_query.snapshot_interval.unwrap_or(100);
 
     ws.on_upgrade(move |ws| {
         Box::pin(async move {
+            let rx_span = info_span!(
+                "rx",
+                ws_client_id = ws_client_id.to_string(),
+                ip = ip.to_string(),
+            );
+
+            let tx_span = info_span!(
+                "tx",
+                ws_client_id = ws_client_id.to_string(),
+                ip = ip.to_string(),
+                colors_only = colors_only
+            );
+
             let (tx, rx) = ws.split();
 
-            let mut rx_task = spawn(rx_handler(rx, leds.clone()));
-            let mut tx_task = spawn(tx_handler(tx, leds, colors_only, snapshot_interval));
+            let mut rx_task = spawn(rx_handler(rx, leds.clone()).instrument(rx_span));
+            let mut tx_task =
+                spawn(tx_handler(tx, leds, colors_only, snapshot_interval).instrument(tx_span));
 
             tokio::select! {
-                _ = &mut rx_task => rx_task.abort(),
-                _ = &mut tx_task => tx_task.abort(),
+                _ = &mut rx_task => tx_task.abort(),
+                _ = &mut tx_task => rx_task.abort(),
             };
         })
     })
@@ -121,13 +139,29 @@ impl From<Led> for [u8; 11] {
 
 async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
     loop {
-        if let Some(Ok(message)) = rx.next().await {
-            let handle_message_result = handle_message(message, leds.clone()).await;
-            if handle_message_result.close_handler {
+        match rx.next().await {
+            Some(Ok(message)) => {
+                let handle_message_result = handle_message(message, leds.clone()).await;
+
+                if handle_message_result.close_handler {
+                    break;
+                }
+            }
+            Some(Err(err)) => {
+                error!(
+                    "Error when receiving message: {}. Closing connection...",
+                    err
+                );
+                break;
+            }
+            None => {
+                error!("Connection closed unexpectedly");
                 break;
             }
         }
     }
+
+    info!("Connection closed");
 }
 
 #[derive(Debug)]
@@ -135,6 +169,7 @@ struct HandleMessageResult {
     close_handler: bool,
 }
 
+#[instrument(skip(leds), ret)]
 async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult {
     let mut close_handler = false;
 
@@ -168,7 +203,7 @@ async fn tx_handler(
     loop {
         if latest_generation < leds.generation() {
             latest_generation = send_snapshot(&mut tx, &leds, colors_only).await.generation;
-            info!("Sent snapshot: {}!", snapshot_interval);
+            info!("Sent snapshot");
         }
 
         sleep(Duration::from_millis(snapshot_interval)).await;
