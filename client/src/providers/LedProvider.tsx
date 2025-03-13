@@ -21,7 +21,7 @@ function reduce(state: Color[] | undefined, action: ReduceAction) {
   switch (action.type) {
     case "setColor":
       return state?.map((oldColor, index) =>
-        index === action.index ? action.color : oldColor
+        index === action.index ? action.color : oldColor,
       );
     case "setColors":
       return action.colors;
@@ -49,7 +49,7 @@ export default function LedProvier({
       setColors: (colors: Color[]) =>
         dispatchColors({ type: "setColors", colors }),
     }),
-    [colors]
+    [colors],
   );
 
   return <LedContext.Provider value={value}>{children}</LedContext.Provider>;

@@ -13,7 +13,7 @@ export default function EaselProvider({
   children,
 }: PropsWithChildren<EaselProviderProps>) {
   const [activeColorIndex, setActiveColorIndex] = useState(
-    initialActiveSplotchIndex ?? 0
+    initialActiveSplotchIndex ?? 0,
   );
   const [colors, setColors] = useState<Color[]>(initialColors);
 
@@ -24,19 +24,19 @@ export default function EaselProvider({
         setColor: (newColor: Color) =>
           setColors(
             colors.map((color, subIndex) =>
-              index == subIndex ? newColor : color
-            )
+              index == subIndex ? newColor : color,
+            ),
           ),
         active: index == activeColorIndex,
         use: () => {
           setActiveColorIndex(index);
         },
       })),
-    [activeColorIndex, colors]
+    [activeColorIndex, colors],
   );
   const activeSplotch = useMemo(
     () => splotches[activeColorIndex],
-    [activeColorIndex, splotches]
+    [activeColorIndex, splotches],
   );
   const value = useMemo(
     () => ({
@@ -44,7 +44,7 @@ export default function EaselProvider({
       activeSplotchIndex: activeColorIndex,
       splotches,
     }),
-    [activeSplotch, activeColorIndex, splotches]
+    [activeSplotch, activeColorIndex, splotches],
   );
 
   return (

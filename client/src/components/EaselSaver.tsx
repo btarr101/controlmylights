@@ -11,7 +11,7 @@ export const EaselSaver = () => {
         activeSplotchIndex,
         colors: splotches.map((splotch) => splotch.color.getHex()),
       }),
-    [activeSplotchIndex, splotches]
+    [activeSplotchIndex, splotches],
   );
 
   return null;
@@ -26,7 +26,7 @@ export const EaselLoader = () => {
         activeSplotchIndex,
         colors: splotches.map((splotch) => splotch.color.getHex()),
       }),
-    [activeSplotchIndex, splotches]
+    [activeSplotchIndex, splotches],
   );
 
   return null;

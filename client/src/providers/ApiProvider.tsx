@@ -6,7 +6,7 @@ import { FetchedLed } from "../repo/api";
 
 export default function ApiProvider({ children }: React.PropsWithChildren) {
   const { sendMessage, lastMessage } = useWebSocket(
-    `${import.meta.env.VITE_API_BASE_URL}/leds/ws`
+    `${import.meta.env.VITE_API_BASE_URL}/leds/ws`,
   );
 
   const [latestFetchedLeds, setLatestFetchedLeds] = useState<FetchedLed[]>();
@@ -24,10 +24,10 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
             // |    R     |    G     |    B     |      Timestamp       |
             // ---------------------------------------------------------
             const dataView = new DataView(
-              new Uint8Array(timestampBytes).buffer
+              new Uint8Array(timestampBytes).buffer,
             );
             const timestamp = new Date(
-              Number(dataView.getBigUint64(0, false)) * 1000
+              Number(dataView.getBigUint64(0, false)) * 1000,
             );
             return {
               color: { red, green, blue } as {
@@ -37,7 +37,7 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
               },
               timestamp,
             };
-          }
+          },
         );
 
         setLatestFetchedLeds(parsedFetchedLeds);
@@ -60,8 +60,8 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
           sendMessage(new Uint8Array([high, low, red, green, blue]));
         },
         latestFetchedLeds,
-      } as ApiState),
-    [latestFetchedLeds, sendMessage]
+      }) as ApiState,
+    [latestFetchedLeds, sendMessage],
   );
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

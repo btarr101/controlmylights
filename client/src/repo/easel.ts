@@ -1,5 +1,5 @@
 export type SavedEasel = {
-	activeSplotchIndex?: number;
+  activeSplotchIndex?: number;
   colors: string[];
 };
 
@@ -12,7 +12,7 @@ export function loadEasel(): SavedEasel | null {
 
   try {
     const savedEasel = JSON.parse(value);
-    
+
     return savedEasel as SavedEasel;
   } catch (error) {
     console.error(`Failed to load easel: ${error}`);
@@ -22,5 +22,5 @@ export function loadEasel(): SavedEasel | null {
 }
 
 export function saveEasel(easel: SavedEasel) {
-  localStorage.setItem("easel", JSON.stringify(easel))
+  localStorage.setItem("easel", JSON.stringify(easel));
 }

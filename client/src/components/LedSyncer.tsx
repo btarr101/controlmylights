@@ -17,7 +17,7 @@ const LedSyncInitializer = () => {
     (async () => {
       const fetchedLeds = await getLeds();
       const initialColors = fetchedLeds.map(
-        ({ color: { red, green, blue } }) => new Color(red, green, blue)
+        ({ color: { red, green, blue } }) => new Color(red, green, blue),
       );
       setColors(initialColors);
     })();
@@ -76,7 +76,6 @@ const LedSyncUpdater = () => {
       if (currentOldColors !== undefined) {
         colors.forEach((color, id) => {
           if (color.getHex() !== currentOldColors[id]?.getHex()) {
-            console.log(color);
             updateLed({ id, color });
           }
         });

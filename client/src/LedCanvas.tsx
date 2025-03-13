@@ -9,92 +9,100 @@ import { Portal } from "react-konva-utils";
 import Konva from "konva";
 
 export const LedCanvas = () => {
-  const horizontalLeds = 50;
-  const verticalLeds = 25;
-  const ledSize = 24;
-
   const canvasWidth = 960;
   const canvasHeight = 540;
 
-  const ledHorizontalSpacing = Math.floor(
-    (canvasWidth - ledSize) / (horizontalLeds - 1)
-  );
-  const ledVerticalSpacing = Math.floor(
-    (canvasHeight - ledSize) / (verticalLeds - 1)
-  );
+  // Stick this rendering in an async function...
+  // Apparently react just works with promises! Which is awesome!
+  const renderLeds = useMemo(() => {
+    const horizontalLeds = 50;
+    const verticalLeds = 25;
+    const ledSize = 24;
 
-  const unusedWidth =
-    canvasWidth - ledSize - ledHorizontalSpacing * (horizontalLeds - 1);
-  const unusedHeight =
-    canvasHeight - ledSize - ledVerticalSpacing * (verticalLeds - 1);
+    const ledHorizontalSpacing = Math.floor(
+      (canvasWidth - ledSize) / (horizontalLeds - 1),
+    );
+    const ledVerticalSpacing = Math.floor(
+      (canvasHeight - ledSize) / (verticalLeds - 1),
+    );
+
+    const unusedWidth =
+      canvasWidth - ledSize - ledHorizontalSpacing * (horizontalLeds - 1);
+    const unusedHeight =
+      canvasHeight - ledSize - ledVerticalSpacing * (verticalLeds - 1);
+
+    return async () => (
+      <Layer>
+        {[...Array(horizontalLeds - 1)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={index}
+            size={ledSize}
+            x={(index + 1) * ledHorizontalSpacing + unusedWidth / 2}
+            y={unusedHeight / 2}
+          />
+        ))}
+        {[...Array(verticalLeds - 1)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={index + horizontalLeds - 1}
+            size={ledSize}
+            x={canvasWidth - ledSize - unusedWidth / 2}
+            y={(index + 1) * ledVerticalSpacing + unusedHeight / 2}
+          />
+        ))}
+        {[...Array(horizontalLeds - 1)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={index + horizontalLeds + verticalLeds - 2}
+            size={ledSize}
+            x={
+              canvasWidth -
+              ledSize -
+              (index + 1) * ledHorizontalSpacing -
+              unusedWidth / 2
+            }
+            y={canvasHeight - ledSize - unusedHeight / 2}
+          />
+        ))}
+        {[...Array(verticalLeds - 1)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={index + horizontalLeds + verticalLeds + horizontalLeds - 3}
+            size={ledSize}
+            x={unusedWidth / 2}
+            y={
+              canvasHeight -
+              ledSize -
+              (index + 1) * ledVerticalSpacing -
+              unusedHeight / 2
+            }
+          />
+        ))}
+        <Group
+          name="hue-group"
+          globalCompositeOperation="source-atop"
+          opacity={0.5}
+        />
+        <Group
+          name="top-group"
+          globalCompositeOperation="source-over"
+          opacity={0.5}
+        />
+      </Layer>
+    );
+  }, [canvasWidth, canvasHeight]);
 
   return (
     <div className="w-full border-1 bg-[url(/room.jpg)] bg-cover bg-center">
       <ResponsiveStage
         width={canvasWidth}
         height={canvasHeight}
-        className="w-full max-w-8xl mx-auto"
+        className="max-w-8xl mx-auto w-full"
       >
-        <Layer name="glow-layer" />
-        <Layer name="outline-layer" />
-        <Layer>
-          {[...Array(horizontalLeds - 1)].map((_, index) => (
-            <LedButton
-              key={index}
-              index={index}
-              size={ledSize}
-              x={(index + 1) * ledHorizontalSpacing + unusedWidth / 2}
-              y={unusedHeight / 2}
-            />
-          ))}
-          {[...Array(verticalLeds - 1)].map((_, index) => (
-            <LedButton
-              key={index}
-              index={index + horizontalLeds - 1}
-              size={ledSize}
-              x={canvasWidth - ledSize - unusedWidth / 2}
-              y={(index + 1) * ledVerticalSpacing + unusedHeight / 2}
-            />
-          ))}
-          {[...Array(horizontalLeds - 1)].map((_, index) => (
-            <LedButton
-              key={index}
-              index={index + horizontalLeds + verticalLeds - 2}
-              size={ledSize}
-              x={
-                canvasWidth -
-                ledSize -
-                (index + 1) * ledHorizontalSpacing -
-                unusedWidth / 2
-              }
-              y={canvasHeight - ledSize - unusedHeight / 2}
-            />
-          ))}
-          {[...Array(verticalLeds - 1)].map((_, index) => (
-            <LedButton
-              key={index}
-              index={index + horizontalLeds + verticalLeds + horizontalLeds - 3}
-              size={ledSize}
-              x={unusedWidth / 2}
-              y={
-                canvasHeight -
-                ledSize -
-                (index + 1) * ledVerticalSpacing -
-                unusedHeight / 2
-              }
-            />
-          ))}
-          <Group
-            name="hue-group"
-            globalCompositeOperation="source-atop"
-            opacity={0.5}
-          />
-          <Group
-            name="top-group"
-            globalCompositeOperation="source-over"
-            opacity={0.5}
-          />
-        </Layer>
+        <Layer name="glow-layer" listening={false} />
+        <Layer name="outline-layer" listening={false} />
+        {renderLeds()}
       </ResponsiveStage>
     </div>
   );
@@ -149,7 +157,7 @@ const LedButton = ({
         container.style.cursor = "pointer";
       }
     },
-    [handlePaint]
+    [handlePaint],
   );
 
   const handleMouseLeave = useCallback(
@@ -159,7 +167,7 @@ const LedButton = ({
         container.style.cursor = "default";
       }
     },
-    []
+    [],
   );
 
   const handleMouseDown = useCallback(() => {
@@ -206,6 +214,7 @@ const LedButton = ({
           shadowEnabled={true}
           shadowBlur={48}
           shadowColor={ledHex}
+          listening={false}
         />
       </Portal>
       <Portal selector=".outline-layer">
@@ -220,6 +229,7 @@ const LedButton = ({
           shadowColor="black"
           opacity={1.0}
           shadowBlur={0.0}
+          listening={false}
         />
       </Portal>
       <Image image={lightBulbImage} width={size} height={size} x={x} y={y} />
@@ -230,6 +240,7 @@ const LedButton = ({
           height={size}
           x={x}
           y={y}
+          listening={false}
         />
       </Portal>
       <Portal selector=".top-group">
@@ -245,6 +256,7 @@ const LedButton = ({
           onMouseLeave={handleMouseLeave}
           onTouchStart={handlePaintStart}
           onPointerEnter={handlePaint}
+          listening={true}
         />
       </Portal>
     </>

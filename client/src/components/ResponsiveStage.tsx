@@ -2,7 +2,7 @@ import Konva from "konva";
 import {
   HTMLAttributes,
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -24,7 +24,7 @@ export const ResponsiveStage = ({
   const stageContainerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<StageType>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleResize = () => {
       const stageContainer = stageContainerRef.current;
       if (stageContainer) {
@@ -62,7 +62,7 @@ export const ResponsiveStage = ({
         });
       }
     },
-    []
+    [],
   );
 
   return (

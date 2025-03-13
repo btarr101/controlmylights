@@ -10,7 +10,7 @@ export const LedEasel = () => {
 
   const splotchesPerRow = useMemo(
     () => Math.round(Math.sqrt(splotches.length)),
-    [splotches]
+    [splotches],
   );
 
   return (
@@ -21,7 +21,7 @@ export const LedEasel = () => {
           color={activeSplotch.color.getHex()}
           onChange={(hex) => activeSplotch.setColor(new Color(hex))}
         />
-        <div className="flex flex-col space-y-6 justify-center p-6">
+        <div className="flex flex-col justify-center space-y-6 p-6">
           {_.chunk(splotches, splotchesPerRow).map((splotchRow, key) => (
             <div key={key} className="flex space-x-6">
               {splotchRow.map((splotch, key) => (
@@ -41,10 +41,10 @@ type SplotchButtonProps = {
 
 const SplotchButton = ({ splotch }: SplotchButtonProps) => {
   return (
-    <div className="w-9 h-9 items-center justify-center flex">
+    <div className="flex h-9 w-9 items-center justify-center">
       <button
         className={`rounded-full border-1 ${
-          splotch.active ? "w-9 h-9" : "w-7 h-7 cursor-pointer"
+          splotch.active ? "h-9 w-9" : "h-7 w-7 cursor-pointer"
         }`}
         style={{
           backgroundColor: splotch.color.getHex(),

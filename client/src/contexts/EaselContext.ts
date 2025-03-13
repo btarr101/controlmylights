@@ -12,24 +12,24 @@ export type Splotch = {
   setColor: (newColor: Color) => void;
 } & (
   | {
-	  active: true;
-	}
+      active: true;
+    }
   | {
-	  active: false;
-	  use: () => void;
-	}
+      active: false;
+      use: () => void;
+    }
 );
 
 export const EaselContext = createContext<EaselState>({
   get activeSplotch() {
-	return this.splotches[0];
+    return this.splotches[0];
   },
   splotches: [
-	{
-	  active: true,
-	  color: new Color(255, 255, 255, 1.0),
-	  setColor: () => {},
-	},
+    {
+      active: true,
+      color: new Color(255, 255, 255, 1.0),
+      setColor: () => {},
+    },
   ],
 });
 
