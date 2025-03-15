@@ -2,11 +2,12 @@ import useWebSocket from "react-use-websocket";
 import { ApiContext, ApiState } from "../contexts/ApiContext";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
-import { FetchedLed } from "../repo/api";
+import { FetchedLed, websocketOptions } from "../repo/api";
 
 export default function ApiProvider({ children }: React.PropsWithChildren) {
   const { sendMessage, lastMessage } = useWebSocket(
     `${import.meta.env.VITE_API_BASE_URL}/leds/ws`,
+    websocketOptions,
   );
 
   const [latestFetchedLeds, setLatestFetchedLeds] = useState<FetchedLed[]>();

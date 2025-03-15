@@ -34,8 +34,8 @@ export const App = () => {
           <EaselSaver />
           <ApiProvider>
             <LedSyncer />
-            <div className="flex min-h-screen min-w-sm flex-col">
-              <div className="space-y-2 py-8">
+            <div className="flex min-h-screen min-w-sm flex-col justify-center">
+              <div className="space-y-2 py-4">
                 <header className="text-center text-2xl">
                   Control My Lights
                 </header>

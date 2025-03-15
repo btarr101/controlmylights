@@ -1,3 +1,5 @@
+import { Options } from "react-use-websocket";
+
 export type FetchedLed = {
   color: {
     red: number;
@@ -5,6 +7,14 @@ export type FetchedLed = {
     blue: number;
   };
   timestamp: Date;
+};
+
+export const websocketOptions: Options = {
+  disableJson: true,
+  shouldReconnect: () => true,
+  heartbeat: {
+    interval: 60000,
+  },
 };
 
 export async function getLeds(): Promise<FetchedLed[]> {
