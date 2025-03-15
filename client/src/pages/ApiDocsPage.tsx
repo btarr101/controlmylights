@@ -101,7 +101,7 @@ const WsDocRouteDescription = () => {
         &nbsp; Further details
       </button>
       {detailsExposed && (
-        <div className="m-2 rounded-md bg-stone-100 p-2">
+        <div className="m-2 overflow-x-scroll rounded-md bg-stone-100 p-2">
           Snapshots w/ timestamps (assumed by default when connecting) are
           BINARY websocket payloads that take on the following form:
           {/* prettier-ignore */}
@@ -149,7 +149,7 @@ const WsDocRouteDescription = () => {
               green.
             </li>
             <li>
-              - '<span className="font-mono">00c8ffff00</span>' sets LED 200 to
+              - '<span className="font-mono">0090ffff00</span>' sets LED 144 to
               yellow.
             </li>
           </ul>

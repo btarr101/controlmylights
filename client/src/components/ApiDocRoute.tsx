@@ -209,15 +209,15 @@ export function ApiDocRoute<K extends string>({
           <div className="rounded border bg-red-400 p-2">{error.message}</div>
         ))
         .with({ type: "http" }, ({ response }) => (
-          <pre
-            style={{
-              counterReset: "line",
-            }}
-            className={`max-h-72 overflow-x-scroll overflow-y-scroll rounded border p-2 ${
+          <div
+            className={`grid max-h-72 grid-cols-2 gap-x-2 overflow-x-scroll overflow-y-scroll rounded border p-2 ${
               response.statusCode >= 200 && response.statusCode <= 299
                 ? "bg-green-100"
                 : "bg-red-100"
             }`}
+            style={{
+              gridTemplateColumns: "auto minmax(0,1fr)",
+            }}
           >
             {JSON.stringify(response, null, 2)
               .split("\n")
@@ -225,12 +225,15 @@ export function ApiDocRoute<K extends string>({
                 const digits = array.length.toString().length;
 
                 return (
-                  <p key={number}>
-                    {number.toString().padEnd(digits)}| {line}
-                  </p>
+                  <Fragment key={number}>
+                    <span className="font-mono text-black/50">
+                      {number.toString().padEnd(digits)}
+                    </span>
+                    <pre>{line}</pre>
+                  </Fragment>
                 );
               })}
-          </pre>
+          </div>
         ))
         .with({ type: "websocket" }, () => (
           <WsDemo
