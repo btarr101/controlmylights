@@ -9,7 +9,7 @@ export const ApiDocsPage = () => (
         type: "http",
         method: "GET",
       }}
-      description="Gets the current state of every LED"
+      description="Gets the current state of every LED."
       buildRequestParams={() => ({
         url: `${import.meta.env.VITE_API_BASE_URL}/leds`,
       })}
@@ -20,7 +20,7 @@ export const ApiDocsPage = () => (
         type: "http",
         method: "GET",
       }}
-      description="Gets the current state of one LED"
+      description="Gets the current state of one LED."
       params={[{ label: "id", initial: "0", description: "Index of the LED" }]}
       buildRequestParams={({ id }) => ({
         url: `${import.meta.env.VITE_API_BASE_URL}/leds/${id}`,
@@ -32,7 +32,7 @@ export const ApiDocsPage = () => (
         type: "http",
         method: "POST",
       }}
-      description="Sets the color of a LED"
+      description="Sets the color of a LED."
       params={[
         { label: "id", initial: "0", description: "Index of the LED" },
         { label: "red", initial: "255" },
@@ -73,7 +73,6 @@ export const ApiDocsPage = () => (
             snapshot_interval,
           }).filter(([, value]) => value),
         );
-        console.log(queryParams);
         return {
           url: `${import.meta.env.VITE_API_BASE_URL}/leds/ws?${queryParams}`,
         };

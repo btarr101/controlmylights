@@ -127,8 +127,11 @@ export function ApiDocRoute<K extends string>({
   return (
     <section className="space-y-2">
       <p className="text-2xl">{path}</p>
-      {description && <p>{description}</p>}
-      {Object.keys(params) && (
+      {description &&
+        match(typeof description)
+          .with("string", () => <p>{description}</p>)
+          .otherwise(() => description)}
+      {params.length > 0 && Object.keys(params) && (
         <div
           className="grid gap-2"
           style={{
