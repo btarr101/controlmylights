@@ -1,7 +1,15 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import useWebSocket from "react-use-websocket";
 import { match } from "ts-pattern";
 import { websocketOptions } from "../repo/api";
+import { createPortal } from "react-dom";
 
 export type ApiDocRouteRequestType =
   | {
@@ -109,14 +117,12 @@ export function ApiDocRoute<K extends string>({
         });
       })
       .with({ type: "websocket" }, () => () => {
-        setWsFrozen(false); // ewwww
         setResult({ type: "websocket" });
       })
       .exhaustive();
   }, [fetchParams.body, fetchParams.url, requestType]);
 
-  // This is ugly... really shouldn't be polluting out here
-  const [wsFrozen, setWsFrozen] = useState(false);
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
   return (
     <section className="space-y-2">
@@ -152,7 +158,7 @@ export function ApiDocRoute<K extends string>({
           ))}
         </div>
       )}
-      <div className="space-x-2">
+      <div ref={buttonsRef} className="space-x-2">
         {!(
           requestType.type === "websocket" && result?.type === "websocket"
         ) && (
@@ -183,26 +189,15 @@ export function ApiDocRoute<K extends string>({
           </button>
         )}
         {result !== undefined && (
-          <>
-            {result.type === "websocket" && (
-              <button
-                className={`rounded border bg-gray-100 p-1 hover:cursor-pointer ${wsFrozen ? "hover:bg-orange-300" : "hover:bg-teal-300"} ${wsFrozen ? "bg-orange-100" : "bg-teal-100"}`}
-                type="button"
-                onClick={() => setWsFrozen((frozen) => !frozen)}
-              >
-                {wsFrozen ? "Unfreeze" : "Freeze"}
-              </button>
-            )}
-            <button
-              className="rounded border bg-gray-100 p-1 hover:cursor-pointer hover:bg-gray-300"
-              type="button"
-              onClick={() => setResult(undefined)}
-            >
-              {match(result)
-                .with({ type: "websocket" }, () => "Disconnect")
-                .otherwise(() => "Clear")}
-            </button>
-          </>
+          <button
+            className="rounded border bg-gray-100 p-1 hover:cursor-pointer hover:bg-gray-300"
+            type="button"
+            onClick={() => setResult(undefined)}
+          >
+            {match(result)
+              .with({ type: "websocket" }, () => "Disconnect")
+              .otherwise(() => "Clear")}
+          </button>
         )}
       </div>
       {match(result)
@@ -236,7 +231,7 @@ export function ApiDocRoute<K extends string>({
         .with({ type: "websocket" }, () => (
           <WsDemo
             endpoint={fetchParams.url}
-            frozen={wsFrozen}
+            freezeButtonPortal={buttonsRef}
             setError={(error) =>
               setResult({
                 type: "error",
@@ -252,8 +247,8 @@ export function ApiDocRoute<K extends string>({
 
 export type WsDemoProps = {
   endpoint: string;
-  frozen: boolean;
   setError?: (error: Error) => void;
+  freezeButtonPortal?: RefObject<HTMLDivElement | null>;
 };
 
 type MessageData = {
@@ -261,7 +256,7 @@ type MessageData = {
   hexString: string;
 };
 
-const WsDemo = ({ endpoint, frozen, setError }: WsDemoProps) => {
+const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
   const { lastMessage } = useWebSocket(endpoint, {
     ...websocketOptions,
     onError: () => {
@@ -270,6 +265,7 @@ const WsDemo = ({ endpoint, frozen, setError }: WsDemoProps) => {
     },
   });
   const [rxMessages, setRxMessages] = useState<MessageData[]>([]);
+  const [frozen, setFrozen] = useState(false);
 
   useEffect(() => {
     if (!frozen && lastMessage !== null) {
@@ -292,21 +288,39 @@ const WsDemo = ({ endpoint, frozen, setError }: WsDemoProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastMessage]);
 
+  const freezeButton = useMemo(
+    () => (
+      <button
+        className={`rounded border bg-gray-100 p-1 hover:cursor-pointer ${frozen ? "bg-orange-100 hover:bg-orange-300" : "bg-teal-100 hover:bg-teal-300"}`}
+        type="button"
+        onClick={() => setFrozen((frozen) => !frozen)}
+      >
+        {frozen ? "Unfreeze" : "Freeze"}
+      </button>
+    ),
+    [frozen],
+  );
+
   return (
-    <div
-      className={`grid h-max max-h-96 items-stretch overflow-scroll rounded border p-2 ${frozen && "bg-teal-50"}`}
-      style={{
-        gridTemplateColumns: "auto minmax(0,1fr)",
-      }}
-    >
-      {rxMessages.map((messageData, index) => (
-        <WsMessageLine
-          key={messageData.timestamp.toISOString()}
-          messageData={messageData}
-          alt={index % 2 == 0}
-        />
-      ))}
-    </div>
+    <>
+      {freezeButtonPortal?.current
+        ? createPortal(freezeButton, freezeButtonPortal.current)
+        : freezeButton}
+      <div
+        className={`grid h-max max-h-96 items-stretch overflow-scroll rounded border p-2 ${frozen && "bg-teal-50"}`}
+        style={{
+          gridTemplateColumns: "auto minmax(0,1fr)",
+        }}
+      >
+        {rxMessages.map((messageData, index) => (
+          <WsMessageLine
+            key={messageData.timestamp.toISOString()}
+            messageData={messageData}
+            alt={index % 2 == 0}
+          />
+        ))}
+      </div>
+    </>
   );
 };
 
