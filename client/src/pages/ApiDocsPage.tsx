@@ -57,11 +57,13 @@ export const ApiDocsPage = () => (
       params={[
         {
           label: "colors_only",
+          initial: "false",
           description:
             "true/false - assumed false - if to only include colors in snapshots",
         },
         {
           label: "snapshot_interval",
+          initial: "100",
           description:
             "Interval in ms that snapshots are sent - when there are updates. 100 is assumed and values less than 100 will be ignored.",
         },
@@ -135,6 +137,22 @@ const WsDocRouteDescription = () => {
             |Id/Index (Big Endian)|    R     |    G     |    B     |<br />
             --------------------------------------------------------<br />
           </pre>
+          <br />
+          Examples:
+          <ul className="list-none">
+            <li>
+              - '<span className="font-mono">0000ffffff</span>' sets LED 0 to
+              white.
+            </li>
+            <li>
+              - '<span className="font-mono">000a00ff00</span>' sets LED 10 to
+              green.
+            </li>
+            <li>
+              - '<span className="font-mono">00c8ffff00</span>' sets LED 200 to
+              yellow.
+            </li>
+          </ul>
         </div>
       )}
       <br />

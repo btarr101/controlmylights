@@ -1,6 +1,7 @@
 import {
   Fragment,
   RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -259,8 +260,19 @@ type MessageData = {
   hexString: string;
 };
 
+type SentMessageResult =
+  | {
+      type: "sent";
+      hexString: string;
+      timestamp: Date;
+    }
+  | {
+      type: "error";
+      error: Error;
+    };
+
 const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
-  const { lastMessage } = useWebSocket(endpoint, {
+  const { lastMessage, sendMessage } = useWebSocket(endpoint, {
     ...websocketOptions,
     onError: () => {
       if (setError)
@@ -269,6 +281,9 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
   });
   const [rxMessages, setRxMessages] = useState<MessageData[]>([]);
   const [frozen, setFrozen] = useState(false);
+  const [messageToSendHex, setMessageToSendHex] = useState("");
+  const [sendMessageResult, setSendMessageResult] =
+    useState<SentMessageResult | null>(null);
 
   useEffect(() => {
     if (!frozen && lastMessage !== null) {
@@ -294,7 +309,7 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
   const freezeButton = useMemo(
     () => (
       <button
-        className={`rounded border bg-gray-100 p-1 hover:cursor-pointer ${frozen ? "bg-orange-100 hover:bg-orange-300" : "bg-teal-100 hover:bg-teal-300"}`}
+        className={`rounded border p-1 hover:cursor-pointer ${frozen ? "bg-orange-100 hover:bg-orange-300" : "bg-teal-100 hover:bg-teal-300"}`}
         type="button"
         onClick={() => setFrozen((frozen) => !frozen)}
       >
@@ -304,11 +319,66 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
     [frozen],
   );
 
+  const sendHexMessage = useCallback(() => {
+    try {
+      const bytes = hexStringToUint8Array(messageToSendHex);
+      sendMessage(bytes);
+      setSendMessageResult({
+        type: "sent",
+        hexString: messageToSendHex,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      setSendMessageResult({
+        type: "error",
+        error: error as Error,
+      });
+    }
+  }, [messageToSendHex, sendMessage]);
+
   return (
     <>
       {freezeButtonPortal?.current
         ? createPortal(freezeButton, freezeButtonPortal.current)
         : freezeButton}
+      <div className="my-4 space-y-2 space-x-2">
+        <label className="w-min whitespace-nowrap">Bytes (Hexadecimal)</label>
+        <input
+          className={"h-fit w-min border"}
+          value={messageToSendHex}
+          onChange={(event) => setMessageToSendHex(event.target.value)}
+        />
+        <button
+          className={`rounded border bg-purple-300 p-1 hover:cursor-pointer hover:bg-purple-500`}
+          type="button"
+          onClick={sendHexMessage}
+        >
+          Send
+        </button>
+        {sendMessageResult && (
+          <>
+            <button
+              className="rounded border bg-gray-100 p-1 hover:cursor-pointer hover:bg-gray-300"
+              type="button"
+              onClick={() => setSendMessageResult(null)}
+            >
+              Clear
+            </button>
+            {match(sendMessageResult)
+              .with({ type: "sent" }, ({ hexString, timestamp }) => (
+                <div className="rounded border bg-green-100 p-2">
+                  Sent '{hexString}' at {timestamp.toLocaleString()}
+                </div>
+              ))
+              .with({ type: "error" }, ({ error }) => (
+                <div className="rounded border bg-red-400 p-2">
+                  {error.message}
+                </div>
+              ))
+              .exhaustive()}
+          </>
+        )}
+      </div>
       <div
         className={`grid h-max max-h-96 items-stretch overflow-scroll rounded border p-2 ${frozen && "bg-teal-50"}`}
         style={{
@@ -325,6 +395,48 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
       </div>
     </>
   );
+};
+
+const nibbleMap: Record<string, number> = {
+  "0": 0x0,
+  "1": 0x1,
+  "2": 0x2,
+  "3": 0x3,
+  "4": 0x4,
+  "5": 0x5,
+  "6": 0x6,
+  "7": 0x7,
+  "8": 0x8,
+  "9": 0x9,
+  a: 0xa,
+  b: 0xb,
+  c: 0xc,
+  d: 0xd,
+  e: 0xe,
+  f: 0xf,
+} as const;
+
+const hexStringToUint8Array = (hexString: string) => {
+  if (hexString.length % 2 !== 0) {
+    throw new Error(
+      `Could not convert '${hexString}' to a byte array: Byte string must be even in length.`,
+    );
+  }
+
+  const byteStrings = hexString.match(/.{2}/g) ?? [];
+  const byteNumbers = byteStrings.map((byteString) => {
+    const firstNibble = nibbleMap[byteString[0]!];
+    const secondNibble = nibbleMap[byteString[1]!];
+    if (firstNibble === undefined || secondNibble === undefined) {
+      throw new Error(
+        `Could not convert '${hexString}' to a byte array: Could not parse '${byteString}' into a byte.`,
+      );
+    }
+
+    return (firstNibble << 4) + secondNibble;
+  });
+
+  return Uint8Array.from(byteNumbers);
 };
 
 const WsMessageLine = ({
