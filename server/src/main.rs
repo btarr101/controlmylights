@@ -49,6 +49,8 @@ async fn main(
     #[shuttle_shared_db::Postgres] operator: SerdeJsonOperator,
 ) -> Result<MyService, shuttle_runtime::Error> {
     dbg!(std::env::vars().collect::<HashMap<_, _>>());
+    std::env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
+    dbg!(std::env::vars().collect::<HashMap<_, _>>());
 
     let config = Config::try_from(&secret_store)
         .map_err(|err| shuttle_runtime::Error::Custom(CustomError::new(err)))?;
