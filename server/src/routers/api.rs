@@ -17,7 +17,7 @@ use futures::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use tokio::{spawn, sync::Mutex, time::sleep};
 use tracing::{error, info, info_span, instrument, Instrument};
@@ -55,8 +55,27 @@ async fn get_led(
     Ok(Json(led))
 }
 
-async fn get_leds(State(leds): State<LedRepo>) -> Json<Vec<Led>> {
-    Json(leds.snapshot().await.leds)
+#[derive(Serialize)]
+struct WithId<T: Serialize> {
+    id: usize,
+    #[serde(flatten)]
+    inner: T,
+}
+
+impl<T: Serialize> WithId<T> {
+    fn new(id: usize, inner: T) -> Self { Self { id, inner } }
+}
+
+async fn get_leds(State(leds): State<LedRepo>) -> Json<Vec<WithId<Led>>> {
+    Json(
+        leds.snapshot()
+            .await
+            .leds
+            .into_iter()
+            .enumerate()
+            .map(|(id, led)| WithId::new(id, led))
+            .collect(),
+    )
 }
 
 async fn post_led(
