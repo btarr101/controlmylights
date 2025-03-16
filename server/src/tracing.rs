@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use opentelemetry::{trace::TracerProvider, KeyValue};
-use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
+use opentelemetry_otlp::{HasExportConfig, WithExportConfig, WithHttpConfig};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -35,11 +35,14 @@ pub fn setup_tracing(
         format!("Basic {}", basic_credentials),
     )]);
 
-    let log_exporter = opentelemetry_otlp::LogExporter::builder()
+    let mut log_exporter_builder = opentelemetry_otlp::LogExporter::builder()
         .with_http()
         .with_endpoint(format!("{}/v1/logs", otlp_endpoint))
-        .with_headers(authorization_headers.clone())
-        .build()?;
+        .with_headers(authorization_headers.clone());
+
+    dbg!(log_exporter_builder.export_config());
+
+    let log_exporter = log_exporter_builder.build()?;
     let log_provider = opentelemetry_sdk::logs::SdkLoggerProvider::builder()
         .with_batch_exporter(log_exporter)
         .with_resource(resource.clone())

@@ -59,8 +59,6 @@ async fn main(
         otlp_password: &config.otlp_password,
     })?;
 
-    tracing::info!("Config: {:#?}", &config);
-
     let ipinfo_config = IpInfoConfig {
         token: Some(config.ipinfo_token),
         ..Default::default()
