@@ -60,8 +60,10 @@ pub fn setup_tracing(
     let tracer = span_provider.tracer("controlmylights");
 
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
+        .with_default_directive(LevelFilter::TRACE.into())
         .from_env_lossy();
+
+    dbg!(&filter);
 
     tracing_subscriber::registry()
         .with(filter)
