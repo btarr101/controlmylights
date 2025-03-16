@@ -1,7 +1,7 @@
 #pragma once
 #include <WiFiS3.h>
 
-using MyWifiClient = WiFiClient;
+using MyWifiClient = WiFiSSLClient;
 
 enum Opcode {
 	CONTINUATION = 0x0,
