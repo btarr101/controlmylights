@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
     extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, routing::get,
@@ -48,6 +48,8 @@ async fn main(
     #[shuttle_runtime::Secrets] secret_store: SecretStore,
     #[shuttle_shared_db::Postgres] operator: SerdeJsonOperator,
 ) -> Result<MyService, shuttle_runtime::Error> {
+    dbg!(std::env::vars().collect::<HashMap<_, _>>());
+
     let config = Config::try_from(&secret_store)
         .map_err(|err| shuttle_runtime::Error::Custom(CustomError::new(err)))?;
 
