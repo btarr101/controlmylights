@@ -1,6 +1,7 @@
 use multiple_errors::return_multiple_errors;
 use shuttle_runtime::SecretStore;
 
+#[derive(Debug)]
 pub struct Config {
     pub service_name: &'static str,
     pub stage: &'static str,
