@@ -48,9 +48,11 @@ async fn main(
     #[shuttle_runtime::Secrets] secret_store: SecretStore,
     #[shuttle_shared_db::Postgres] operator: SerdeJsonOperator,
 ) -> Result<MyService, shuttle_runtime::Error> {
-    dbg!(std::env::vars().collect::<HashMap<_, _>>());
+    // HACK: Shuttle set the 'OTEL_EXPORTER_OTLP_ENDPOINT'
+    // environment variable by default.
+    //
+    // We want to use the value from our config, not the runtime environment.
     std::env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
-    dbg!(std::env::vars().collect::<HashMap<_, _>>());
 
     let config = Config::try_from(&secret_store)
         .map_err(|err| shuttle_runtime::Error::Custom(CustomError::new(err)))?;

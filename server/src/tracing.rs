@@ -35,14 +35,11 @@ pub fn setup_tracing(
         format!("Basic {}", basic_credentials),
     )]);
 
-    let mut log_exporter_builder = opentelemetry_otlp::LogExporter::builder()
+    let log_exporter = opentelemetry_otlp::LogExporter::builder()
         .with_http()
         .with_endpoint(format!("{}/v1/logs", otlp_endpoint))
-        .with_headers(authorization_headers.clone());
-
-    dbg!(log_exporter_builder.export_config());
-
-    let log_exporter = log_exporter_builder.build()?;
+        .with_headers(authorization_headers.clone())
+        .build()?;
     let log_provider = opentelemetry_sdk::logs::SdkLoggerProvider::builder()
         .with_batch_exporter(log_exporter)
         .with_resource(resource.clone())
@@ -60,13 +57,11 @@ pub fn setup_tracing(
     let tracer = span_provider.tracer("controlmylights");
 
     let filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::TRACE.into())
+        .with_default_directive(LevelFilter::INFO.into())
         .from_env_lossy();
 
-    dbg!(&filter);
-
     tracing_subscriber::registry()
-        // .with(filter)
+        .with(filter)
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(&log_provider))
         .with(tracing_subscriber::fmt::Layer::new().without_time())
