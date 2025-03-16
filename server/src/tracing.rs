@@ -66,7 +66,7 @@ pub fn setup_tracing(
     dbg!(&filter);
 
     tracing_subscriber::registry()
-        .with(filter)
+        // .with(filter)
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge::new(&log_provider))
         .with(tracing_subscriber::fmt::Layer::new().without_time())
