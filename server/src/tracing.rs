@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use opentelemetry::{trace::TracerProvider, KeyValue};
-use opentelemetry_otlp::{HasExportConfig, WithExportConfig, WithHttpConfig};
+use opentelemetry_otlp::{WithExportConfig, WithHttpConfig};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
