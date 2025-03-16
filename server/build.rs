@@ -1,9 +1,9 @@
 use std::{fs, path::Path, process::Command};
 
 fn main() {
-    if let Err(err) = build_client_app() {
-        cargo_emit::warning!("Client app build failed: {}", err);
-    }
+    // if let Err(err) = build_client_app() {
+    //     cargo_emit::warning!("Client app build failed: {}", err);
+    // }
 }
 
 #[allow(dead_code)]

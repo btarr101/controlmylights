@@ -5,16 +5,14 @@ use axum::{
     Extension, Router,
 };
 use axum_client_ip::InsecureClientIp;
-use chrono::Utc;
 use controlmylights::{
     config::Config,
-    repo::led::{Led, LedRepo, LedRepoSnapshot},
+    repo::led::{LedRepo, LedRepoSnapshot},
     routers::api,
     routes::light_bulb_generated::get_randomly_generated_light_bulb_svg,
     state::AppState,
     tasks::persist::persist,
     tracing::{setup_tracing, TracingConfig},
-    types::Color,
 };
 use ipinfo::{IpInfo, IpInfoConfig};
 use shuttle_runtime::{CustomError, SecretStore, Service};
@@ -27,7 +25,7 @@ use tower_http::{
 };
 use tracing::{error, info, Instrument, Level, Span};
 
-// static IPINFO: OnceCell<Mutex<IpInfo>> = OnceCell::const_new();
+const LED_COUNT: usize = 150;
 
 pub struct MyService(IntoMakeServiceWithConnectInfo<Router, SocketAddr>);
 
@@ -72,24 +70,13 @@ async fn main(
     let snapshot = operator
         .read_serialized("snapshot")
         .await
-        .unwrap_or_else(|_| {
-            let now = Utc::now();
-            LedRepoSnapshot {
-                generation: 0,
-                leds: vec![
-                    Led {
-                        color: Color {
-                            red: 255,
-                            green: 255,
-                            blue: 255,
-                        },
-                        last_updated: now
-                    };
-                    250
-                ],
-            }
+        .unwrap_or_else(|_| LedRepoSnapshot {
+            generation: 0,
+            leds: vec![],
         });
     let leds = LedRepo::from(snapshot);
+    leds.resize(LED_COUNT).await;
+
     let state = AppState { leds: leds.clone() };
 
     tokio::spawn(persist(leds.clone(), operator));
