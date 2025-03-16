@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
     body::Bytes,
@@ -19,7 +19,7 @@ use futures::{
 };
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
-use tokio::{spawn, time::sleep};
+use tokio::{spawn, sync::Mutex, time::sleep};
 use tracing::{error, info, info_span, instrument, Instrument};
 use uuid::Uuid;
 
@@ -63,12 +63,12 @@ async fn post_led(
     State(leds): State<LedRepo>,
     Path(id): Path<usize>,
     Form(color): Form<Color>,
-) -> Result<(), LedRouterError> {
-    leds.set(id, color).await.map_err(|err| match err {
+) -> Result<Json<Led>, LedRouterError> {
+    let led = leds.set(id, color).await.map_err(|err| match err {
         LedRepoError::OutOfBounds(id) => LedRouterError::NotFound(id),
     })?;
 
-    Ok(())
+    Ok(Json(led))
 }
 
 #[serde_inline_default]
@@ -108,8 +108,8 @@ async fn get_ws(
             );
 
             let (tx, rx) = ws.split();
-
-            let mut rx_task = spawn(rx_handler(rx, leds.clone()).instrument(rx_span));
+            let tx = Arc::new(Mutex::new(tx));
+            let mut rx_task = spawn(rx_handler(rx, tx.clone(), leds.clone()).instrument(rx_span));
             let mut tx_task =
                 spawn(tx_handler(tx, leds, colors_only, snapshot_interval).instrument(tx_span));
 
@@ -146,11 +146,21 @@ impl From<Led> for [u8; 11] {
     }
 }
 
-async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
+async fn rx_handler(
+    mut rx: SplitStream<WebSocket>,
+    tx: Arc<Mutex<SplitSink<WebSocket, Message>>>,
+    leds: LedRepo,
+) {
     loop {
         match rx.next().await {
             Some(Ok(message)) => {
                 let handle_message_result = handle_message(message, leds.clone()).await;
+
+                // Purely for satiating react-use-websocket
+                if handle_message_result.send_pong {
+                    let mut tx = tx.lock().await;
+                    let _ = tx.send(Message::Text("pong".into())).await;
+                }
 
                 if handle_message_result.close_handler {
                     break;
@@ -176,11 +186,13 @@ async fn rx_handler(mut rx: SplitStream<WebSocket>, leds: LedRepo) {
 #[derive(Debug)]
 struct HandleMessageResult {
     close_handler: bool,
+    send_pong: bool,
 }
 
 #[instrument(skip(leds), ret)]
 async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult {
     let mut close_handler = false;
+    let mut send_pong = false;
 
     match message {
         Message::Binary(bytes) => {
@@ -193,17 +205,26 @@ async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult 
                 let _ = leds.set(id, Color { red, green, blue }).await;
             }
         }
+        Message::Text(utf8) => {
+            let text = utf8.to_string();
+            if text == "ping" {
+                send_pong = true;
+            }
+        }
         Message::Close(_) => {
             close_handler = true;
         }
         _ => (),
     };
 
-    HandleMessageResult { close_handler }
+    HandleMessageResult {
+        close_handler,
+        send_pong,
+    }
 }
 
 async fn tx_handler(
-    mut tx: SplitSink<WebSocket, Message>,
+    tx: Arc<Mutex<SplitSink<WebSocket, Message>>>,
     leds: LedRepo,
     colors_only: bool,
     snapshot_interval: u64,
@@ -211,6 +232,7 @@ async fn tx_handler(
     let mut latest_generation = 0;
     loop {
         if latest_generation < leds.generation() {
+            let mut tx = tx.lock().await;
             latest_generation = send_snapshot(&mut tx, &leds, colors_only).await.generation;
             info!("Sent snapshot");
         }

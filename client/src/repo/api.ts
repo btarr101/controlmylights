@@ -14,6 +14,8 @@ export const websocketOptions: Options = {
   shouldReconnect: () => true,
   heartbeat: {
     interval: 60000,
+    message: "ping",
+    returnMessage: "pong"
   },
 };
 

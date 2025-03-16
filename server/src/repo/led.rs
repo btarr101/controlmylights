@@ -57,7 +57,7 @@ impl LedRepo {
     pub async fn get(&self, id: usize) -> Option<Led> { self.0.leds.read().await.get(id).cloned() }
 
     #[instrument(skip(self), level=Level::TRACE)]
-    pub async fn set(&self, id: usize, color: Color) -> Result<(), LedRepoError> {
+    pub async fn set(&self, id: usize, color: Color) -> Result<Led, LedRepoError> {
         let mut lock = self.0.leds.write().await;
         let current_led = lock.get_mut(id).ok_or(LedRepoError::OutOfBounds(id))?;
 
@@ -68,7 +68,7 @@ impl LedRepo {
 
         tracing::trace!("Led updated (previous generation was {previous_generation})!");
 
-        Ok(())
+        Ok(*current_led)
     }
 
     pub fn generation(&self) -> usize { self.0.generation.load(Ordering::Acquire) }
