@@ -1,8 +1,8 @@
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
-    extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, Extension,
-    Router,
+    extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, routing::get,
+    Extension, Router,
 };
 use axum_client_ip::InsecureClientIp;
 use chrono::Utc;
@@ -10,6 +10,7 @@ use controlmylights::{
     config::Config,
     repo::led::{Led, LedRepo, LedRepoSnapshot},
     routers::api,
+    routes::light_bulb_generated::get_randomly_generated_light_bulb_svg,
     state::AppState,
     tasks::persist::persist,
     tracing::{setup_tracing, TracingConfig},
@@ -21,7 +22,7 @@ use shuttle_shared_db::SerdeJsonOperator;
 use tokio::sync::Mutex;
 use tower_http::{
     cors::{AllowMethods, AllowOrigin, CorsLayer},
-    services::ServeDir,
+    services::{ServeDir, ServeFile},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
 };
 use tracing::{error, info, Instrument, Level, Span};
@@ -101,7 +102,15 @@ async fn main(
     let router = Router::new()
         .nest("/api", api::get_router().layer(cors))
         .with_state(state)
-        .fallback_service(ServeDir::new(manifest_dir.join("public")));
+        .route(
+            "/light-bulb-generated.svg",
+            get(get_randomly_generated_light_bulb_svg),
+        )
+        .fallback_service(
+            ServeDir::new(manifest_dir.join("public")).fallback(ServeFile::new(
+                manifest_dir.join("public").join("index.html"),
+            )),
+        );
 
     let service = router
         .layer(
