@@ -142,7 +142,7 @@ export function ApiDocRoute<K extends string>({
           {params.map((param, index) => (
             <Fragment key={index}>
               <label className="w-min">{param.label}</label>
-              <div className="flex flex-row space-x-2">
+              <div className="space-x-2">
                 <input
                   className={`h-fit w-min border ${result?.type === "websocket" && "cursor-not-allowed bg-stone-100"}`}
                   value={paramValues[param.label] ?? ""}
@@ -155,7 +155,9 @@ export function ApiDocRoute<K extends string>({
                   }}
                 />
                 {param.description && (
-                  <p className="text-stone-400">({param.description})</p>
+                  <span className="inline-block text-stone-400">
+                    ({param.description})
+                  </span>
                 )}
               </div>
             </Fragment>

@@ -1,16 +1,15 @@
 #include <Arduino.h>
+#include <ArduinoLog.h>
+#include <FastLED.h>
 #include <WsClient.h>
 
 #include "logging.h"
-#include <ArduinoLog.h>
 
-constexpr const char* WS_HOST = "192.168.1.47";
-constexpr const int WS_PORT = 8000;
-constexpr const char* WS_PATH = "/api/leds/ws?colors_only=true&snapshot_interval=250";
-
+CRGB leds[LED_COUNT];
 WsClient wsClient;
 
 void safeBoot();
+void setupLEDS();
 void setupWifi();
 
 void setup()
@@ -20,6 +19,7 @@ void setup()
 
 	setupLogging();
 	safeBoot();
+	setupLEDS();
 	setupWifi();
 }
 
@@ -34,6 +34,16 @@ void loop()
 	if (receivedPayload) {
 		Payload payload = wsClient.getLatestPayload();
 		Log.infoln("Received payload (opcode=%d, length=%d)", payload.opcode, payload.length);
+
+		for (size_t i = 0; i < LED_COUNT; ++i) {
+			size_t redChannelIndex = i * 3;
+			leds[i] = CRGB(
+				payload.data[redChannelIndex],
+				payload.data[redChannelIndex + 1],
+				payload.data[redChannelIndex + 2]);
+		}
+
+		FastLED.show();
 	}
 }
 
@@ -42,6 +52,22 @@ void safeBoot()
 	for (uint8_t t = 4; t > 0; t--) {
 		Log.infoln("[SETUP] Boot Wait (%d)", t);
 		delay(1000);
+	}
+}
+
+void setupLEDS()
+{
+	FastLED.addLeds<WS2811, 4, RGB>(leds, LED_COUNT);
+	FastLED.setBrightness(32);
+
+	for (size_t i = 0; i < LED_COUNT; ++i) {
+		leds[i] = CRGB(0, 0, 0);
+	}
+
+	for (size_t i = 0; i < LED_COUNT; ++i) {
+		leds[i] = CRGB(255, 255, 255);
+		Log.infoln("[LEDS] Showing frame %d", i);
+		FastLED.delay(100);
 	}
 }
 

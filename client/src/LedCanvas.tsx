@@ -8,75 +8,132 @@ import { useMouse } from "./contexts/MouseContext";
 import { Portal } from "react-konva-utils";
 import Konva from "konva";
 
-export const LedCanvas = () => {
-  const canvasWidth = 960;
-  const canvasHeight = 540;
+export type CanvasConfig = {
+  width: number;
+  height: number;
+  ledSize: number;
+  margin?: number;
+  topConfig: CanvasWallConfig;
+  rightConfig: CanvasWallConfig;
+  bottomConfig: CanvasWallConfig;
+  leftConfig: CanvasWallConfig;
+};
 
+/**
+ * Configuration for a specific wall.
+ *
+ * Assumes the "beginning" corner is covered, and the wall
+ * includes the "ending" corner.
+ */
+export type CanvasWallConfig = {
+  leds: number;
+  startOffsetPercent?: number;
+};
+
+const canvasConfig: CanvasConfig = {
+  width: 960,
+  height: 640,
+  ledSize: 24,
+  margin: 12,
+  topConfig: {
+    leds: 38,
+    startOffsetPercent: 20,
+  },
+  rightConfig: {
+    leds: 32,
+  },
+  bottomConfig: {
+    leds: 49,
+  },
+  leftConfig: {
+    leds: 31,
+  },
+} as const;
+
+const calculateSpacing = (length: number, size: number, count: number) =>
+  (length - size) / count;
+
+export const LedCanvas = () => {
   // Stick this rendering in an async function...
   // Apparently react just works with promises! Which is awesome!
   const renderLeds = useMemo(() => {
-    const horizontalLeds = 50;
-    const verticalLeds = 25;
-    const ledSize = 24;
+    // God, I am so sorry for the sins you are about to witness below...
+    const {
+      width,
+      height,
+      ledSize,
+      margin: maybeMargin,
+      topConfig,
+      rightConfig,
+      bottomConfig,
+      leftConfig,
+    } = canvasConfig;
 
-    const ledHorizontalSpacing = Math.floor(
-      (canvasWidth - ledSize) / (horizontalLeds - 1),
-    );
-    const ledVerticalSpacing = Math.floor(
-      (canvasHeight - ledSize) / (verticalLeds - 1),
-    );
+    const margin = maybeMargin ?? 0;
+    const doubleMargin = margin * 2;
 
-    const unusedWidth =
-      canvasWidth - ledSize - ledHorizontalSpacing * (horizontalLeds - 1);
-    const unusedHeight =
-      canvasHeight - ledSize - ledVerticalSpacing * (verticalLeds - 1);
+    const topRatio = 1 - (topConfig.startOffsetPercent ?? 0) / 100;
+    const topWidth = (width - doubleMargin) * topRatio;
+    const topSpacing = calculateSpacing(topWidth, ledSize, topConfig.leds);
+    const rightSpacing = calculateSpacing(
+      height - doubleMargin,
+      ledSize,
+      rightConfig.leds,
+    );
+    const bottomSpacing = calculateSpacing(
+      width - doubleMargin,
+      ledSize,
+      bottomConfig.leds,
+    );
+    const leftSpacing = calculateSpacing(
+      height - doubleMargin,
+      ledSize,
+      leftConfig.leds,
+    );
 
     return async () => (
       <Layer>
-        {[...Array(horizontalLeds - 1)].map((_, index) => (
+        {[...Array(topConfig.leds)].map((_, index) => (
           <LedButton
             key={index}
             index={index}
             size={ledSize}
-            x={(index + 1) * ledHorizontalSpacing + unusedWidth / 2}
-            y={unusedHeight / 2}
-          />
-        ))}
-        {[...Array(verticalLeds - 1)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={index + horizontalLeds - 1}
-            size={ledSize}
-            x={canvasWidth - ledSize - unusedWidth / 2}
-            y={(index + 1) * ledVerticalSpacing + unusedHeight / 2}
-          />
-        ))}
-        {[...Array(horizontalLeds - 1)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={index + horizontalLeds + verticalLeds - 2}
-            size={ledSize}
             x={
-              canvasWidth -
-              ledSize -
-              (index + 1) * ledHorizontalSpacing -
-              unusedWidth / 2
+              margin +
+              (index + 1) * topSpacing +
+              (width - doubleMargin) * (1 - topRatio)
             }
-            y={canvasHeight - ledSize - unusedHeight / 2}
+            y={margin}
           />
         ))}
-        {[...Array(verticalLeds - 1)].map((_, index) => (
+        {/* Note that none of the other sides are handling the offset ratio... */}
+        {[...Array(rightConfig.leds)].map((_, index) => (
           <LedButton
             key={index}
-            index={index + horizontalLeds + verticalLeds + horizontalLeds - 3}
+            index={index + topConfig.leds}
             size={ledSize}
-            x={unusedWidth / 2}
-            y={
-              canvasHeight -
-              ledSize -
-              (index + 1) * ledVerticalSpacing -
-              unusedHeight / 2
+            x={width - ledSize - margin}
+            y={-1 + margin + (index + 1) * rightSpacing}
+          />
+        ))}
+        {[...Array(bottomConfig.leds)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={index + topConfig.leds + rightConfig.leds}
+            size={ledSize}
+            y={height - ledSize - margin}
+            x={1 + -margin + width - ledSize + (index + 1) * -bottomSpacing}
+          />
+        ))}
+        {[...Array(leftConfig.leds)].map((_, index) => (
+          <LedButton
+            key={index}
+            index={
+              index + topConfig.leds + rightConfig.leds + bottomConfig.leds
             }
+            size={ledSize}
+            x={margin}
+            y={1 + -margin + height - ledSize + (index + 1) * -leftSpacing}
           />
         ))}
         <Group
@@ -91,13 +148,13 @@ export const LedCanvas = () => {
         />
       </Layer>
     );
-  }, [canvasWidth, canvasHeight]);
+  }, []);
 
   return (
     <div className="w-full border-1 bg-[url(/room.jpg)] bg-cover bg-center">
       <ResponsiveStage
-        width={canvasWidth}
-        height={canvasHeight}
+        width={canvasConfig.width}
+        height={canvasConfig.height}
         className="max-w-8xl mx-auto w-full"
       >
         <Layer name="glow-layer" listening={false} />
