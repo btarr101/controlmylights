@@ -22,7 +22,7 @@ pub fn setup_tracing(
         otlp_username,
         otlp_password,
     }: TracingConfig,
-) -> Result<(), shuttle_runtime::CustomError> {
+) -> Result<(), anyhow::Error> {
     let resource = opentelemetry_sdk::Resource::builder()
         .with_service_name(service_name)
         .with_attribute(KeyValue::new("stage", stage))

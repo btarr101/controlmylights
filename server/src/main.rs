@@ -1,9 +1,6 @@
-use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
-use axum::{
-    extract::connect_info::IntoMakeServiceWithConnectInfo, http::request::Request, routing::get,
-    Extension, Router,
-};
+use axum::{http::request::Request, routing::get, Extension, Router};
 use axum_client_ip::InsecureClientIp;
 use controlmylights::{
     config::Config,
@@ -11,12 +8,9 @@ use controlmylights::{
     routers::api,
     routes::light_bulb_generated::get_randomly_generated_light_bulb_svg,
     state::AppState,
-    tasks::persist::persist,
     tracing::{setup_tracing, TracingConfig},
 };
 use ipinfo::{IpInfo, IpInfoConfig};
-use shuttle_runtime::{CustomError, SecretStore, Service};
-use shuttle_shared_db::SerdeJsonOperator;
 use tokio::sync::Mutex;
 use tower_http::{
     cors::{AllowMethods, AllowOrigin, CorsLayer},
@@ -27,35 +21,9 @@ use tracing::{error, info, Instrument, Level, Span};
 
 const LED_COUNT: usize = 150;
 
-pub struct MyService(IntoMakeServiceWithConnectInfo<Router, SocketAddr>);
-
-#[shuttle_runtime::async_trait]
-impl Service for MyService {
-    async fn bind(mut self, addr: SocketAddr) -> Result<(), shuttle_runtime::Error> {
-        let tcp_listener = shuttle_runtime::tokio::net::TcpListener::bind(addr)
-            .await
-            .map_err(|err| shuttle_runtime::Error::BindPanic(err.to_string()))?;
-        axum::serve(tcp_listener, self.0)
-            .await
-            .map_err(CustomError::new)?;
-
-        Ok(())
-    }
-}
-
-#[shuttle_runtime::main]
-async fn main(
-    #[shuttle_runtime::Secrets] secret_store: SecretStore,
-    #[shuttle_shared_db::Postgres] operator: SerdeJsonOperator,
-) -> Result<MyService, shuttle_runtime::Error> {
-    // HACK: Shuttle set the 'OTEL_EXPORTER_OTLP_ENDPOINT'
-    // environment variable by default.
-    //
-    // We want to use the value from our config, not the runtime environment.
-    std::env::remove_var("OTEL_EXPORTER_OTLP_ENDPOINT");
-
-    let config = Config::try_from(&secret_store)
-        .map_err(|err| shuttle_runtime::Error::Custom(CustomError::new(err)))?;
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let config = Config::new_from_env()?;
 
     setup_tracing(TracingConfig {
         service_name: config.service_name,
@@ -69,23 +37,15 @@ async fn main(
         token: Some(config.ipinfo_token),
         ..Default::default()
     };
-    let ipinfo = Arc::new(Mutex::new(
-        IpInfo::new(ipinfo_config).map_err(shuttle_runtime::CustomError::new)?,
-    ));
+    let ipinfo = Arc::new(Mutex::new(IpInfo::new(ipinfo_config)?));
 
-    let snapshot = operator
-        .read_serialized("snapshot")
-        .await
-        .unwrap_or_else(|_| LedRepoSnapshot {
-            generation: 0,
-            leds: vec![],
-        });
-    let leds = LedRepo::from(snapshot);
+    let leds = LedRepo::from(LedRepoSnapshot {
+        generation: 0,
+        leds: vec![],
+    });
     leds.resize(LED_COUNT).await;
 
     let state = AppState { leds: leds.clone() };
-
-    tokio::spawn(persist(leds.clone(), operator));
 
     let cors = CorsLayer::new()
         .allow_methods(AllowMethods::any())
@@ -145,5 +105,10 @@ async fn main(
         .layer(Extension(ipinfo))
         .into_make_service_with_connect_info::<SocketAddr>();
 
-    Ok(MyService(service))
+    info!("Starting server at http://{}", config.bind_address);
+
+    let listener = tokio::net::TcpListener::bind(config.bind_address).await?;
+    axum::serve(listener, service).await?;
+
+    Ok(())
 }

@@ -1,9 +1,11 @@
+use std::env;
+
 use multiple_errors::return_multiple_errors;
-use shuttle_runtime::SecretStore;
 
 #[derive(Debug)]
 pub struct Config {
     pub service_name: &'static str,
+    pub bind_address: String,
     pub stage: &'static str,
     pub otlp_endpoint: String,
     pub otlp_username: String,
@@ -14,23 +16,32 @@ pub struct Config {
 #[derive(thiserror::Error, Debug)]
 pub enum NewConfigError {
     #[error("Invalid secrets: {0:?}")]
-    InvalidSecrets(Vec<SecretStoreObtainError>),
+    InvalidVars(Vec<VarError>),
 }
 
-impl TryFrom<&SecretStore> for Config {
-    type Error = NewConfigError;
+#[derive(thiserror::Error, Debug)]
+pub enum VarError {
+    #[error("Env var {0} is missing")]
+    Missing(String),
+    #[error("Value for env var {0} is invalid")]
+    Invalid(String),
+}
 
-    fn try_from(secret_store: &SecretStore) -> Result<Config, Self::Error> {
+impl Config {
+    pub fn new_from_env() -> Result<Self, NewConfigError> {
         return_multiple_errors!(
-            let mut errors: Vec<SecretStoreObtainError> = vec![];
-            let otlp_endpoint = secret_store.obtain("OTLP_ENDPOINT");
-            let otlp_username = secret_store.obtain("OTLP_USERNAME");
-            let otlp_password = secret_store.obtain("OTLP_PASSWORD");
-            let ipinfo_token = secret_store.obtain("IPINFO_TOKEN");
+            let mut errors: Vec<VarError> = vec![];
+            let otlp_endpoint = obtain_from_env("OTLP_ENDPOINT");
+            let otlp_username = obtain_from_env("OTLP_USERNAME");
+            let otlp_password = obtain_from_env("OTLP_PASSWORD");
+            let ipinfo_token = obtain_from_env("IPINFO_TOKEN");
             if_there_are_errors {
-                return Err(NewConfigError::InvalidSecrets(errors));
+                return Err(NewConfigError::InvalidVars(errors));
             }
         );
+
+        let bind_address =
+            obtain_from_env::<String>("ADDRESS").unwrap_or("127.0.0.1:3000".to_string());
 
         let service_name = env!("CARGO_CRATE_NAME");
 
@@ -42,6 +53,7 @@ impl TryFrom<&SecretStore> for Config {
 
         let config = Config {
             service_name,
+            bind_address,
             stage,
             otlp_endpoint,
             otlp_username,
@@ -53,25 +65,13 @@ impl TryFrom<&SecretStore> for Config {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum SecretStoreObtainError {
-    #[error("Secret {0} is missing")]
-    MissingSecret(String),
-    #[error("Value for secret {0} is invalid")]
-    InvalidSecret(String),
-}
-
-trait SecretStoreExt {
-    fn obtain<T: for<'a> TryFrom<&'a str>>(&self, key: &str) -> Result<T, SecretStoreObtainError>;
-}
-
-impl SecretStoreExt for SecretStore {
-    fn obtain<T: for<'a> TryFrom<&'a str>>(&self, key: &str) -> Result<T, SecretStoreObtainError> {
-        self.get(key)
-            .ok_or(SecretStoreObtainError::MissingSecret(key.to_string()))
-            .and_then(|value| {
-                T::try_from(value.as_str())
-                    .map_err(|_| SecretStoreObtainError::InvalidSecret(key.to_string()))
-            })
-    }
+fn obtain_from_env<T: for<'a> TryFrom<&'a str>>(key: &str) -> Result<T, VarError> {
+    env::var(key)
+        .map_err(|err| match err {
+            env::VarError::NotPresent => VarError::Missing(key.to_string()),
+            env::VarError::NotUnicode(_) => VarError::Invalid(key.to_string()),
+        })
+        .and_then(|value| {
+            T::try_from(value.as_str()).map_err(|_| VarError::Invalid(key.to_string()))
+        })
 }
