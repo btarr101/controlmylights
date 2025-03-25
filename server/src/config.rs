@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 use multiple_errors::return_multiple_errors;
 
@@ -6,6 +6,7 @@ use multiple_errors::return_multiple_errors;
 pub struct Config {
     pub service_name: &'static str,
     pub bind_address: String,
+    pub public_dir: PathBuf,
     pub stage: &'static str,
     pub otlp_endpoint: String,
     pub otlp_username: String,
@@ -40,8 +41,9 @@ impl Config {
             }
         );
 
-        let bind_address =
-            obtain_from_env::<String>("ADDRESS").unwrap_or("127.0.0.1:3000".to_string());
+        let bind_address = obtain_from_env("ADDRESS").unwrap_or("127.0.0.1:3000".to_string());
+        let public_dir = obtain_from_env("PUBLIC_DIR")
+            .unwrap_or(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("public"));
 
         let service_name = env!("CARGO_CRATE_NAME");
 
@@ -54,6 +56,7 @@ impl Config {
         let config = Config {
             service_name,
             bind_address,
+            public_dir,
             stage,
             otlp_endpoint,
             otlp_username,

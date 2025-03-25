@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 use axum::{http::request::Request, routing::get, Extension, Router};
 use axum_client_ip::InsecureClientIp;
@@ -51,7 +51,6 @@ async fn main() -> anyhow::Result<()> {
         .allow_methods(AllowMethods::any())
         .allow_origin(AllowOrigin::any());
 
-    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let router = Router::new()
         .nest("/api", api::get_router().layer(cors))
         .with_state(state)
@@ -60,9 +59,8 @@ async fn main() -> anyhow::Result<()> {
             get(get_randomly_generated_light_bulb_svg),
         )
         .fallback_service(
-            ServeDir::new(manifest_dir.join("public")).fallback(ServeFile::new(
-                manifest_dir.join("public").join("index.html"),
-            )),
+            ServeDir::new(&config.public_dir)
+                .fallback(ServeFile::new(config.public_dir.join("index.html"))),
         );
 
     let service = router
