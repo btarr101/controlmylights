@@ -1,22 +1,19 @@
-import { Layer, Image, Rect, Group, Circle } from "react-konva";
-import { ResponsiveStage } from "./components/ResponsiveStage";
-import useImage from "use-image";
-import { useLeds } from "./contexts/LedContext";
+import { useCallback, useEffect, useRef, useState } from "react";
+import LedIcon from "./assets/light-bulb.svg?react";
 import { useEasel } from "./contexts/EaselContext";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Led, useLeds } from "./contexts/LedContext";
 import { useMouse } from "./contexts/MouseContext";
-import { Portal } from "react-konva-utils";
-import Konva from "konva";
+import { MouseEvent as ReactMouseEvent } from "react";
 
 export type CanvasConfig = {
   width: number;
   height: number;
   ledSize: number;
   margin?: number;
-  topConfig: CanvasWallConfig;
-  rightConfig: CanvasWallConfig;
-  bottomConfig: CanvasWallConfig;
-  leftConfig: CanvasWallConfig;
+  top: CanvasWallConfig;
+  right: CanvasWallConfig;
+  bottom: CanvasWallConfig;
+  left: CanvasWallConfig;
 };
 
 /**
@@ -30,292 +27,176 @@ export type CanvasWallConfig = {
   startOffsetPercent?: number;
 };
 
-const canvasConfig: CanvasConfig = {
+const config: CanvasConfig = {
   width: 960,
   height: 640,
   ledSize: 24,
   margin: 12,
-  topConfig: {
+  top: {
     leds: 38,
     startOffsetPercent: 20,
   },
-  rightConfig: {
+  right: {
     leds: 32,
   },
-  bottomConfig: {
+  bottom: {
     leds: 49,
   },
-  leftConfig: {
+  left: {
     leds: 31,
   },
 } as const;
 
-const calculateSpacing = (length: number, size: number, count: number) =>
-  (length - size) / count;
-
+/**
+ * Shit like this makes me hate html and css.
+ */
 export const LedCanvas = () => {
-  // Stick this rendering in an async function...
-  // Apparently react just works with promises! Which is awesome!
-  const renderLeds = useMemo(() => {
-    // God, I am so sorry for the sins you are about to witness below...
-    const {
-      width,
-      height,
-      ledSize,
-      margin: maybeMargin,
-      topConfig,
-      rightConfig,
-      bottomConfig,
-      leftConfig,
-    } = canvasConfig;
+  const { leds } = useLeds();
 
-    const margin = maybeMargin ?? 0;
-    const doubleMargin = margin * 2;
+  const divRef = useRef<HTMLDivElement>(null);
 
-    const topRatio = 1 - (topConfig.startOffsetPercent ?? 0) / 100;
-    const topWidth = (width - doubleMargin) * topRatio;
-    const topSpacing = calculateSpacing(topWidth, ledSize, topConfig.leds);
-    const rightSpacing = calculateSpacing(
-      height - doubleMargin,
-      ledSize,
-      rightConfig.leds,
-    );
-    const bottomSpacing = calculateSpacing(
-      width - doubleMargin,
-      ledSize,
-      bottomConfig.leds,
-    );
-    const leftSpacing = calculateSpacing(
-      height - doubleMargin,
-      ledSize,
-      leftConfig.leds,
-    );
+  const dispatchMouseEvent = useCallback((event: ReactMouseEvent<unknown>) => {
+    const elements = document.elementsFromPoint(event.clientX, event.clientY);
 
-    return async () => (
-      <Layer>
-        {[...Array(topConfig.leds)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={index}
-            size={ledSize}
-            x={
-              margin +
-              (index + 1) * topSpacing +
-              (width - doubleMargin) * (1 - topRatio)
-            }
-            y={margin}
-          />
-        ))}
-        {/* Note that none of the other sides are handling the offset ratio... */}
-        {[...Array(rightConfig.leds)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={index + topConfig.leds}
-            size={ledSize}
-            x={width - ledSize - margin}
-            y={-1 + margin + (index + 1) * rightSpacing}
-          />
-        ))}
-        {[...Array(bottomConfig.leds)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={index + topConfig.leds + rightConfig.leds}
-            size={ledSize}
-            y={height - ledSize - margin}
-            x={1 + -margin + width - ledSize + (index + 1) * -bottomSpacing}
-          />
-        ))}
-        {[...Array(leftConfig.leds)].map((_, index) => (
-          <LedButton
-            key={index}
-            index={
-              index + topConfig.leds + rightConfig.leds + bottomConfig.leds
-            }
-            size={ledSize}
-            x={margin}
-            y={1 + -margin + height - ledSize + (index + 1) * -leftSpacing}
-          />
-        ))}
-        <Group
-          name="hue-group"
-          globalCompositeOperation="source-atop"
-          opacity={0.5}
-        />
-        <Group
-          name="top-group"
-          globalCompositeOperation="source-over"
-          opacity={0.5}
-        />
-      </Layer>
-    );
+    const div = divRef.current;
+    if (div) {
+      elements
+        .filter((element) => div.contains(element) && div !== element)
+        .forEach((element) =>
+          element.dispatchEvent(
+            new MouseEvent(event.type, {
+              bubbles: true,
+            }),
+          ),
+        );
+    }
   }, []);
 
   return (
-    <div className="w-full border-1 bg-[url(/room.jpg)] bg-cover bg-center">
-      <ResponsiveStage
-        width={canvasConfig.width}
-        height={canvasConfig.height}
-        className="max-w-8xl mx-auto w-full"
-      >
-        <Layer name="glow-layer" listening={false} />
-        <Layer name="outline-layer" listening={false} />
-        {renderLeds()}
-      </ResponsiveStage>
+    <div
+      ref={divRef}
+      className="relative m-8 aspect-3/2 w-full bg-[url(/room.jpg)] bg-cover bg-center"
+      onMouseDown={dispatchMouseEvent}
+      onMouseMove={dispatchMouseEvent}
+    >
+      <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
+        {[...Array(config.top.leds)].map((_, index) => (
+          <LedShadow led={leds?.[index]} key={index} />
+        ))}
+      </div>
+      <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
+        {[...Array(config.right.leds)].map((_, index) => (
+          <LedShadow led={leds?.[index + config.top.leds]} key={index} />
+        ))}
+      </div>
+      <div className="absolute bottom-0 flex h-0 w-full items-center justify-between">
+        {[...Array(config.bottom.leds)].map((_, index) => (
+          <LedShadow
+            led={leds?.[index + config.top.leds + config.right.leds]}
+            key={index}
+          />
+        ))}
+      </div>
+      <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
+        {[...Array(config.left.leds)].map((_, index) => (
+          <LedShadow
+            led={
+              leds?.[
+                index + config.top.leds + config.right.leds + config.bottom.leds
+              ]
+            }
+            key={index}
+          />
+        ))}
+      </div>
+      {/* Lights */}
+      <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
+        {[...Array(config.top.leds)].map((_, index) => (
+          <LedButtonIcon led={leds?.[index]} key={index} />
+        ))}
+      </div>
+      <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
+        {[...Array(config.right.leds)].map((_, index) => (
+          <LedButtonIcon led={leds?.[index + config.top.leds]} key={index} />
+        ))}
+      </div>
+      <div className="absolute bottom-0 flex h-0 w-full items-center justify-between">
+        {[...Array(config.bottom.leds)].map((_, index) => (
+          <LedButtonIcon
+            led={leds?.[index + config.top.leds + config.right.leds]}
+            key={index}
+          />
+        ))}
+      </div>
+      <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
+        {[...Array(config.left.leds)].map((_, index) => (
+          <LedButtonIcon
+            led={
+              leds?.[
+                index + config.top.leds + config.right.leds + config.bottom.leds
+              ]
+            }
+            key={index}
+          />
+        ))}
+      </div>
     </div>
   );
 };
 
-const LedButton = ({
-  index,
-  size,
-  x,
-  y,
-}: {
-  index: number;
-  size: number;
-  x: number;
-  y: number;
-}) => {
-  const [lightBulbImage] = useImage("/light-bulb.svg");
-  const { leftHeld } = useMouse();
-  const { activeSplotch } = useEasel();
-  const { leds } = useLeds();
+const LedShadow = ({ led }: { led?: Led }) => {
+  const hex = led?.color.getHex() ?? "#000000";
+  const lightness = led?.color.getLightness() ?? 0;
+  const size = (32 / 2.0) * Math.pow(lightness, 0.5);
 
-  const { led, ledHex, lightness } = useMemo(() => {
-    const led = leds?.at(index);
-    const color = led?.color;
-    const ledHex = color?.getHex();
-    const lightness = color?.getLightness() ?? 0;
-
-    return { led, ledHex, lightness };
-  }, [leds, index]);
-
-  const ref = useRef<Konva.Circle>(null);
-  const glowCircleRef = useRef<Konva.Circle>(null);
-
-  const handlePaintStart = useCallback(() => {
-    if (activeSplotch && led) {
-      led.setColor(activeSplotch.color);
-    }
-  }, [activeSplotch, led]);
-
-  const handlePaint = useCallback(() => {
-    if (leftHeld) {
-      handlePaintStart();
-    }
-  }, [handlePaintStart, leftHeld]);
-
-  const handleMouseEnter = useCallback(
-    (event: Konva.KonvaEventObject<MouseEvent>) => {
-      handlePaint();
-
-      const container = event.target.getStage()?.container();
-      if (container) {
-        container.style.cursor = "pointer";
-      }
-    },
-    [handlePaint],
-  );
-
-  const handleMouseLeave = useCallback(
-    (event: Konva.KonvaEventObject<MouseEvent>) => {
-      const container = event.target.getStage()?.container();
-      if (container) {
-        container.style.cursor = "default";
-      }
-    },
-    [],
-  );
-
-  const handleMouseDown = useCallback(() => {
-    handlePaintStart();
-  }, [handlePaintStart]);
-
-  const [previousHex, setPreviousHex] = useState<string>();
+  const [glow, setGlow] = useState(false);
+  const [prevColor, setPrevColor] = useState(hex);
   useEffect(() => {
-    const baseRadius = (size / 2.0) * Math.pow(lightness, 0.5);
-
-    if (previousHex !== ledHex) {
-      const glowCircle = glowCircleRef.current;
-      if (glowCircle) {
-        glowCircle.to({
-          width: baseRadius * 6,
-          height: baseRadius * 6,
-          duration: 0.1,
-          onFinish: () =>
-            glowCircle.to({
-              width: baseRadius * 4,
-              height: baseRadius * 4,
-              duration: 0.3,
-            }),
-        });
-      }
-
-      setPreviousHex(ledHex);
+    if (prevColor !== hex) {
+      setGlow(true);
+      setTimeout(() => setGlow(false), 250);
+      setPrevColor(hex);
     }
-  }, [ledHex, previousHex, size, lightness]);
+  }, [prevColor, hex]);
 
   return (
-    <>
-      <Portal selector=".glow-layer">
-        <Circle
-          ref={glowCircleRef}
-          // We don't actually care about drawing the circle,
-          // just the "shadow". So this is just to draw it off screen.
-          x={-size}
-          y={-size}
-          shadowOffsetX={x + size + size / 2}
-          shadowOffsetY={y + size + size / 2}
-          // radius is controlled by use effect
-          fill="#ffffff"
-          shadowEnabled={true}
-          shadowBlur={48}
-          shadowColor={ledHex}
-          listening={false}
-        />
-      </Portal>
-      <Portal selector=".outline-layer">
-        <Image
-          image={lightBulbImage}
-          width={size + 2}
-          height={size + 2}
-          x={-size}
-          y={-size}
-          shadowOffsetX={x - 1 + size}
-          shadowOffsetY={y - 1 + size}
-          shadowColor="black"
-          opacity={1.0}
-          shadowBlur={0.0}
-          listening={false}
-        />
-      </Portal>
-      <Image image={lightBulbImage} width={size} height={size} x={x} y={y} />
-      <Portal selector=".hue-group">
-        <Rect
-          fill={ledHex ?? "000000"}
-          width={size}
-          height={size}
-          x={x}
-          y={y}
-          listening={false}
-        />
-      </Portal>
-      <Portal selector=".top-group">
-        <Circle
-          ref={ref}
-          stroke={"ff0000"}
-          strokeWidth={0}
-          x={x + size / 2}
-          y={y + size / 2}
-          radius={size / 1.5}
-          onMouseDown={handleMouseDown}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-          onTouchStart={handlePaintStart}
-          onPointerEnter={handlePaint}
-          listening={true}
-        />
-      </Portal>
-    </>
+    <div className="relative h-0 w-0">
+      <div
+        className="absolute h-0 w-0 -translate-x-[50%] -translate-y-[50%] rounded-full transition-shadow"
+        style={{
+          boxShadow: `0px 0px 32px ${glow ? size * 1.2 : size}px ${hex}`,
+        }}
+      />
+    </div>
+  );
+};
+
+const LedButtonIcon = ({ led }: { led?: Led }) => {
+  const { leftHeld } = useMouse();
+  const { activeSplotch } = useEasel();
+
+  return (
+    <div
+      className="relative h-0 w-0"
+      onMouseDown={() => {
+        if (activeSplotch?.color) {
+          led?.setColor(activeSplotch.color);
+        }
+      }}
+      onMouseMove={() => {
+        if (leftHeld && activeSplotch?.color) {
+          led?.setColor(activeSplotch.color);
+        }
+      }}
+    >
+      <div className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full bg-transparent" />
+      <LedIcon
+        className="absolute h-4 w-4 -translate-x-[50%] -translate-y-[50%] stroke-black stroke-1 transition-transform sm:h-5 sm:w-5 lg:h-7 lg:w-7"
+        style={{
+          color: led?.color.getHex() ?? "#000000",
+        }}
+        onDragStart={() => false}
+      />
+    </div>
   );
 };

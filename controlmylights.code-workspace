@@ -15,7 +15,7 @@
 		{
 			"name": "arduino_client",
 			"path": "arduino_client"
-		}
+		},
 	],
 	"settings": {
 		"files.associations": {

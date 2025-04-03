@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { ValidateEnv } from "@julr/vite-plugin-validate-env";
+import svgr from 'vite-plugin-svgr';
 import * as fs from "fs";
 
 if (!fs.existsSync(".env")) {
@@ -21,5 +22,6 @@ export default defineConfig({
     ValidateEnv({
       validator: "zod",
     }),
+    svgr()
   ],
 });

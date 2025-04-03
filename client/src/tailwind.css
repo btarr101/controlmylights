@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@theme {
+/* @theme {
   --font-sans: "Comic Sans MS", sans-serif;
-}
+} */
 
 @plugin "tailwindcss-bg-patterns";

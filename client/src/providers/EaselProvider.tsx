@@ -3,48 +3,44 @@ import Color from "ts-color-class";
 import { EaselContext } from "../contexts/EaselContext";
 
 export type EaselProviderProps = {
-  initialActiveSplotchIndex?: number;
+  initialSplotchIndex?: number;
   initialColors: Color[];
 };
 
 export default function EaselProvider({
-  initialActiveSplotchIndex,
+  initialSplotchIndex,
   initialColors,
   children,
 }: PropsWithChildren<EaselProviderProps>) {
-  const [activeColorIndex, setActiveColorIndex] = useState(
-    initialActiveSplotchIndex ?? 0,
-  );
-  const [colors, setColors] = useState<Color[]>(initialColors);
+  const [splotchIndex, setSplotchIndex] = useState(initialSplotchIndex ?? 0);
+  const [splotchColors, setSplotchColors] = useState<Color[]>(initialColors);
 
   const splotches = useMemo(
     () =>
-      colors.map((color, index) => ({
+      splotchColors.map((color, index) => ({
         color,
         setColor: (newColor: Color) =>
-          setColors(
+          setSplotchColors((colors) =>
             colors.map((color, subIndex) =>
               index == subIndex ? newColor : color,
             ),
           ),
-        active: index == activeColorIndex,
-        use: () => {
-          setActiveColorIndex(index);
-        },
+        active: index == splotchIndex,
+        use: () => setSplotchIndex(index),
       })),
-    [activeColorIndex, colors],
+    [splotchIndex, splotchColors],
   );
   const activeSplotch = useMemo(
-    () => splotches[activeColorIndex],
-    [activeColorIndex, splotches],
+    () => splotches[splotchIndex % splotches.length],
+    [splotchIndex, splotches],
   );
   const value = useMemo(
     () => ({
       activeSplotch,
-      activeSplotchIndex: activeColorIndex,
+      activeSplotchIndex: splotchIndex,
       splotches,
     }),
-    [activeSplotch, activeColorIndex, splotches],
+    [activeSplotch, splotchIndex, splotches],
   );
 
   return (

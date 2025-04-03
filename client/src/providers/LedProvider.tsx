@@ -1,4 +1,4 @@
-import { PropsWithChildren, useMemo, useReducer } from "react";
+import { PropsWithChildren, useMemo, useState } from "react";
 import Color from "ts-color-class";
 import { LedContext } from "../contexts/LedContext";
 
@@ -6,33 +6,11 @@ export type LedProviderProps = {
   initialColors?: Color[];
 };
 
-type ReduceAction =
-  | {
-      type: "setColor";
-      index: number;
-      color: Color;
-    }
-  | {
-      type: "setColors";
-      colors: Color[];
-    };
-
-function reduce(state: Color[] | undefined, action: ReduceAction) {
-  switch (action.type) {
-    case "setColor":
-      return state?.map((oldColor, index) =>
-        index === action.index ? action.color : oldColor,
-      );
-    case "setColors":
-      return action.colors;
-  }
-}
-
 export default function LedProvier({
   initialColors,
   children,
 }: PropsWithChildren<LedProviderProps>) {
-  const [colors, dispatchColors] = useReducer(reduce, initialColors);
+  const [colors, setColors] = useState(initialColors);
 
   const value = useMemo(
     () => ({
@@ -43,11 +21,14 @@ export default function LedProvier({
             return;
           }
 
-          dispatchColors({ type: "setColor", index, color: newColor });
+          setColors((colors) =>
+            colors?.map((oldColor, subIndex) =>
+              index === subIndex ? newColor : oldColor,
+            ),
+          );
         },
       })),
-      setColors: (colors: Color[]) =>
-        dispatchColors({ type: "setColors", colors }),
+      setColors,
     }),
     [colors],
   );
