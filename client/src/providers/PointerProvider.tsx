@@ -33,11 +33,9 @@ export default function PointerProvider({ children }: PropsWithChildren) {
 
   const handlePointerDown = useCallback(() => setPointerHeld(true), []);
   const handlePointerUp = useCallback(() => setPointerHeld(false), []);
-  const handlePointerMove = useCallback(
-    (event: PointerEvent) =>
-      pointerMoveListeners.current.forEach((callback) => callback(event)),
-    [],
-  );
+  const handlePointerMove = useCallback((event: PointerEvent) => {
+    pointerMoveListeners.current.forEach((callback) => callback(event));
+  }, []);
 
   useEffect(() => {
     document.addEventListener("pointerdown", handlePointerDown);

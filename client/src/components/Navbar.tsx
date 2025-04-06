@@ -1,6 +1,6 @@
 import { NavLink } from "react-router";
-import GithubIcon from "./assets/github-mark.svg?react";
-import LedIcon from "./assets/light-bulb.svg?react";
+import GithubIcon from "../assets/github-mark.svg?react";
+import LedIcon from "../assets/light-bulb.svg?react";
 import { useLeds } from "../contexts/LedContext";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import _ from "lodash";

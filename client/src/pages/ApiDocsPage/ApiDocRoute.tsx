@@ -9,7 +9,7 @@ import {
 } from "react";
 import useWebSocket from "react-use-websocket";
 import { match } from "ts-pattern";
-import { websocketOptions } from "../repo/api";
+import { websocketOptions } from "../../repo/api";
 import { createPortal } from "react-dom";
 
 export type ApiDocRouteRequestType =

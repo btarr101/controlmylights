@@ -1,9 +1,10 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import LedIcon from "../../assets/light-bulb.svg?react";
 import { useEasel } from "../../contexts/EaselContext";
-import { Led, useLeds } from "../../contexts/LedContext";
+import { useLeds } from "../../contexts/LedContext";
 import { useOnPointerMoved, usePointer } from "../../contexts/PointerContext";
 import { LedShadow } from "../../components/LedShadow";
+import { PointerEvent as ReactPointerEvent } from "react";
 
 export type CanvasConfig = {
   width: number;
@@ -52,33 +53,63 @@ const config: CanvasConfig = {
  */
 export const LedCanvas = () => {
   const { leds } = useLeds();
+  const { activeSplotch } = useEasel();
+  const { held } = usePointer();
 
   const divRef = useRef<HTMLDivElement>(null);
 
-  const dispatchPointerEvent = useCallback((event: PointerEvent) => {
-    const elements = document.elementsFromPoint(event.clientX, event.clientY);
+  const forEachLedHitbox = useCallback(
+    (
+      clientX: number,
+      clientY: number,
+      callback: (ledHitBoxId: number) => void,
+    ) => {
+      const elements = document.elementsFromPoint(clientX, clientY);
 
-    const div = divRef.current;
-    if (div) {
-      elements
-        .filter((element) => div.contains(element) && div !== element)
-        .forEach((element) =>
-          element.dispatchEvent(
-            new PointerEvent(event.type, {
-              bubbles: true,
-            }),
-          ),
+      const div = divRef.current;
+      if (div) {
+        elements
+          .filter((element) => element.id.startsWith("led-hitbox"))
+          .forEach((ledHitbox) => {
+            const ledHitboxId = parseInt(
+              ledHitbox.id.replace("led-hitbox-", ""),
+            );
+            callback(ledHitboxId);
+          });
+      }
+    },
+    [],
+  );
+
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent) => {
+      if (leds && activeSplotch?.color) {
+        forEachLedHitbox(event.clientX, event.clientY, (ledHitboxId) =>
+          leds[ledHitboxId]?.setColor(activeSplotch.color),
         );
-    }
-  }, []);
+      }
+    },
+    [activeSplotch?.color, forEachLedHitbox, leds],
+  );
 
-  useOnPointerMoved(dispatchPointerEvent);
+  const handlePointerMove = useCallback(
+    (event: PointerEvent) => {
+      if (leds && held && activeSplotch?.color) {
+        forEachLedHitbox(event.clientX, event.clientY, (ledHitboxId) => {
+          leds[ledHitboxId]?.setColor(activeSplotch.color);
+        });
+      }
+    },
+    [activeSplotch?.color, forEachLedHitbox, leds, held],
+  );
+
+  useOnPointerMoved(handlePointerMove);
 
   return (
     <div
       ref={divRef}
-      onPointerDown={(event) => dispatchPointerEvent(event.nativeEvent)}
-      className="relative aspect-3/2 w-full bg-[url(/room.jpg)] bg-cover bg-center"
+      onPointerDown={handlePointerDown}
+      className="relative aspect-3/2 w-full touch-none bg-[url(/room.jpg)] bg-cover bg-center"
     >
       <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
         {[...Array(config.top.leds)].map((_, index) => (
@@ -113,18 +144,18 @@ export const LedCanvas = () => {
       {/* Lights */}
       <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
         {[...Array(config.top.leds)].map((_, index) => (
-          <LedButtonIcon led={leds?.[index]} key={index} />
+          <LedButtonIcon index={index} key={index} />
         ))}
       </div>
       <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
         {[...Array(config.right.leds)].map((_, index) => (
-          <LedButtonIcon led={leds?.[index + config.top.leds]} key={index} />
+          <LedButtonIcon index={index + config.top.leds} key={index} />
         ))}
       </div>
       <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
         {[...Array(config.bottom.leds)].map((_, index) => (
           <LedButtonIcon
-            led={leds?.[index + config.top.leds + config.right.leds]}
+            index={index + config.top.leds + config.right.leds}
             key={index}
           />
         ))}
@@ -132,15 +163,13 @@ export const LedCanvas = () => {
       <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
         {[...Array(config.left.leds)].map((_, index) => (
           <LedButtonIcon
-            led={
-              leds?.[
-                config.left.leds -
-                  1 -
-                  index +
-                  config.top.leds +
-                  config.right.leds +
-                  config.bottom.leds
-              ]
+            index={
+              config.left.leds -
+              1 -
+              index +
+              config.top.leds +
+              config.right.leds +
+              config.bottom.leds
             }
             key={index}
           />
@@ -150,28 +179,16 @@ export const LedCanvas = () => {
   );
 };
 
-const LedButtonIcon = ({ led }: { led?: Led }) => {
-  const { held } = usePointer();
-  const { activeSplotch } = useEasel();
-
-  const handlePaintStart = useCallback(() => {
-    if (activeSplotch?.color) {
-      led?.setColor(activeSplotch.color);
-    }
-  }, [activeSplotch, led]);
-  const handlePaintMove = useCallback(() => {
-    if (held) {
-      handlePaintStart();
-    }
-  }, [held, handlePaintStart]);
+const LedButtonIcon = ({ index }: { index: number }) => {
+  const { leds } = useLeds();
+  const led = useMemo(() => leds?.[index], [leds, index]);
 
   return (
-    <div
-      className="relative h-0 w-0"
-      onPointerDown={handlePaintStart}
-      onPointerMove={handlePaintMove}
-    >
-      <div className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full bg-transparent" />
+    <div className="relative h-0 w-0">
+      <div
+        id={`led-hitbox-${index}`}
+        className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full"
+      />
       <LedIcon
         className="absolute h-4 w-4 -translate-x-[50%] -translate-y-[50%] stroke-black stroke-1 transition-transform sm:h-5 sm:w-5 lg:h-7 lg:w-7"
         style={{

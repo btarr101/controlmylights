@@ -10,6 +10,8 @@ import { Navigate, Route, Routes } from "react-router";
 import { LightControllerPage } from "./pages/LightControllerPage";
 import { ApiDocsPage } from "./pages/ApiDocsPage";
 import { Navbar } from "./components/Navbar";
+import { useBreakpoints } from "./contexts/BreakpointsContext";
+import BreakpointsProvider from "./providers/BreakpointsProvider";
 
 export const App = () => {
   const savedEasel =
@@ -27,26 +29,38 @@ export const App = () => {
 
   return (
     <PointerProvider>
-      <EaselProvider
-        initialSplotchIndex={savedEasel.activeSplotchIndex}
-        initialColors={savedEasel.colors.map((hex) => new Color(hex))}
-      >
-        <LedProvier>
-          <EaselSaver />
-          <ApiProvider>
-            <LedSyncer />
-            <div className="pattern-dots pattern-stone-300 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
-            <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
-              <Navbar />
-              <Routes>
-                <Route index element={<LightControllerPage />} />
-                <Route path="apidocs" element={<ApiDocsPage />} />
-                <Route path="*" element={<Navigate to="/" replace={true} />} />
-              </Routes>
-            </div>
-          </ApiProvider>
-        </LedProvier>
-      </EaselProvider>
+      <BreakpointsProvider>
+        <EaselProvider
+          initialSplotchIndex={savedEasel.activeSplotchIndex}
+          initialColors={savedEasel.colors.map((hex) => new Color(hex))}
+        >
+          <LedProvier>
+            <EaselSaver />
+            <ApiProvider>
+              <LedSyncer />
+              <Test />
+              <div className="pattern-dots pattern-stone-300 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
+              <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
+                <Navbar />
+                <Routes>
+                  <Route index element={<LightControllerPage />} />
+                  <Route path="apidocs" element={<ApiDocsPage />} />
+                  <Route
+                    path="*"
+                    element={<Navigate to="/" replace={true} />}
+                  />
+                </Routes>
+              </div>
+            </ApiProvider>
+          </LedProvier>
+        </EaselProvider>
+      </BreakpointsProvider>
     </PointerProvider>
   );
+};
+
+export const Test = () => {
+  const breakpoints = useBreakpoints();
+
+  return <pre>{JSON.stringify(breakpoints, null, 2)}</pre>;
 };
