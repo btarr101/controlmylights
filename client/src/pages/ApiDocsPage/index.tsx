@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiDocRoute } from "../components/ApiDocRoute";
+import { ApiDocRoute } from "../../components/ApiDocRoute";
 
 export const ApiDocsPage = () => (
   <div className="container mx-auto my-2 mb-32 flex max-w-2xl flex-1 flex-col space-y-8">

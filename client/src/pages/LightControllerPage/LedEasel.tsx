@@ -1,5 +1,5 @@
 import Color from "ts-color-class";
-import { Splotch, useEasel } from "./contexts/EaselContext";
+import { Splotch, useEasel } from "../../contexts/EaselContext";
 import { HexColorPicker } from "react-colorful";
 import { useMemo } from "react";
 import _ from "lodash";

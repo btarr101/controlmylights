@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import LedIcon from "./assets/light-bulb.svg?react";
-import { useEasel } from "./contexts/EaselContext";
-import { Led, useLeds } from "./contexts/LedContext";
-import { useMouse } from "./contexts/MouseContext";
-import { MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useRef } from "react";
+import LedIcon from "../../assets/light-bulb.svg?react";
+import { useEasel } from "../../contexts/EaselContext";
+import { Led, useLeds } from "../../contexts/LedContext";
+import { useOnPointerMoved, usePointer } from "../../contexts/PointerContext";
+import { LedShadow } from "../../components/LedShadow";
 
 export type CanvasConfig = {
   width: number;
@@ -55,7 +55,7 @@ export const LedCanvas = () => {
 
   const divRef = useRef<HTMLDivElement>(null);
 
-  const dispatchMouseEvent = useCallback((event: ReactMouseEvent<unknown>) => {
+  const dispatchPointerEvent = useCallback((event: PointerEvent) => {
     const elements = document.elementsFromPoint(event.clientX, event.clientY);
 
     const div = divRef.current;
@@ -64,7 +64,7 @@ export const LedCanvas = () => {
         .filter((element) => div.contains(element) && div !== element)
         .forEach((element) =>
           element.dispatchEvent(
-            new MouseEvent(event.type, {
+            new PointerEvent(event.type, {
               bubbles: true,
             }),
           ),
@@ -72,12 +72,13 @@ export const LedCanvas = () => {
     }
   }, []);
 
+  useOnPointerMoved(dispatchPointerEvent);
+
   return (
     <div
       ref={divRef}
-      className="relative m-8 aspect-3/2 w-full bg-[url(/room.jpg)] bg-cover bg-center"
-      onMouseDown={dispatchMouseEvent}
-      onMouseMove={dispatchMouseEvent}
+      onPointerDown={(event) => dispatchPointerEvent(event.nativeEvent)}
+      className="relative aspect-3/2 w-full bg-[url(/room.jpg)] bg-cover bg-center"
     >
       <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
         {[...Array(config.top.leds)].map((_, index) => (
@@ -89,7 +90,7 @@ export const LedCanvas = () => {
           <LedShadow led={leds?.[index + config.top.leds]} key={index} />
         ))}
       </div>
-      <div className="absolute bottom-0 flex h-0 w-full items-center justify-between">
+      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
         {[...Array(config.bottom.leds)].map((_, index) => (
           <LedShadow
             led={leds?.[index + config.top.leds + config.right.leds]}
@@ -97,7 +98,7 @@ export const LedCanvas = () => {
           />
         ))}
       </div>
-      <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
+      <div className="absolute left-0 flex h-full w-0 flex-col-reverse items-center justify-between">
         {[...Array(config.left.leds)].map((_, index) => (
           <LedShadow
             led={
@@ -120,7 +121,7 @@ export const LedCanvas = () => {
           <LedButtonIcon led={leds?.[index + config.top.leds]} key={index} />
         ))}
       </div>
-      <div className="absolute bottom-0 flex h-0 w-full items-center justify-between">
+      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
         {[...Array(config.bottom.leds)].map((_, index) => (
           <LedButtonIcon
             led={leds?.[index + config.top.leds + config.right.leds]}
@@ -133,7 +134,12 @@ export const LedCanvas = () => {
           <LedButtonIcon
             led={
               leds?.[
-                index + config.top.leds + config.right.leds + config.bottom.leds
+                config.left.leds -
+                  1 -
+                  index +
+                  config.top.leds +
+                  config.right.leds +
+                  config.bottom.leds
               ]
             }
             key={index}
@@ -144,50 +150,26 @@ export const LedCanvas = () => {
   );
 };
 
-const LedShadow = ({ led }: { led?: Led }) => {
-  const hex = led?.color.getHex() ?? "#000000";
-  const lightness = led?.color.getLightness() ?? 0;
-  const size = (32 / 2.0) * Math.pow(lightness, 0.5);
-
-  const [glow, setGlow] = useState(false);
-  const [prevColor, setPrevColor] = useState(hex);
-  useEffect(() => {
-    if (prevColor !== hex) {
-      setGlow(true);
-      setTimeout(() => setGlow(false), 250);
-      setPrevColor(hex);
-    }
-  }, [prevColor, hex]);
-
-  return (
-    <div className="relative h-0 w-0">
-      <div
-        className="absolute h-0 w-0 -translate-x-[50%] -translate-y-[50%] rounded-full transition-shadow"
-        style={{
-          boxShadow: `0px 0px 32px ${glow ? size * 1.2 : size}px ${hex}`,
-        }}
-      />
-    </div>
-  );
-};
-
 const LedButtonIcon = ({ led }: { led?: Led }) => {
-  const { leftHeld } = useMouse();
+  const { held } = usePointer();
   const { activeSplotch } = useEasel();
+
+  const handlePaintStart = useCallback(() => {
+    if (activeSplotch?.color) {
+      led?.setColor(activeSplotch.color);
+    }
+  }, [activeSplotch, led]);
+  const handlePaintMove = useCallback(() => {
+    if (held) {
+      handlePaintStart();
+    }
+  }, [held, handlePaintStart]);
 
   return (
     <div
       className="relative h-0 w-0"
-      onMouseDown={() => {
-        if (activeSplotch?.color) {
-          led?.setColor(activeSplotch.color);
-        }
-      }}
-      onMouseMove={() => {
-        if (leftHeld && activeSplotch?.color) {
-          led?.setColor(activeSplotch.color);
-        }
-      }}
+      onPointerDown={handlePaintStart}
+      onPointerMove={handlePaintMove}
     >
       <div className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full bg-transparent" />
       <LedIcon
