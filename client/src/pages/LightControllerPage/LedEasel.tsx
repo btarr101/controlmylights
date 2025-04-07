@@ -43,7 +43,7 @@ const SplotchButton = ({ splotch }: SplotchButtonProps) => {
   return (
     <div className="flex h-9 w-9 items-center justify-center">
       <button
-        className={`rounded-full border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all ${
+        className={`rounded-full border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-[width,height] ${
           splotch.active ? "h-9 w-9" : "h-7 w-7 cursor-pointer"
         }`}
         style={{

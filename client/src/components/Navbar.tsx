@@ -15,44 +15,31 @@ export const Navbar = () => (
         <header className="text-center text-2xl font-bold">
           Control My Lights
         </header>
-        <nav className="text-center">
+        <nav className="flex justify-items-stretch">
           {[
             { label: "Controller", path: "/" },
             { label: "Api Docs", path: "/apidocs" },
-          ].flatMap(({ label, path }, index, array) => {
-            const navlink = (
-              <NavLink
-                key={2 * index}
-                to={path}
-                end
-                className={({ isActive }) =>
+          ].flatMap(({ label, path }, index) => (
+            <NavLink
+              key={2 * index}
+              to={path}
+              end
+              className={({ isActive }) =>
+                `m-1 flex-1 border-1 border-black text-center transition-all ${
                   isActive
-                    ? "cursor-default text-gray-400"
-                    : "text-blue-400 hover:underline"
-                }
-              >
-                {label}
-              </NavLink>
-            );
-
-            return index + 1 === array.length
-              ? navlink
-              : [
-                  navlink,
-                  <span key={2 * index + 1} className="text-gray-400">
-                    {" "}
-                    |{" "}
-                  </span>,
-                ];
-          })}
+                    ? "translate-[2px] cursor-default bg-stone-200 text-black"
+                    : "text-blue-400 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:underline"
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
         </nav>
       </div>
     </div>
     <button className="border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:cursor-pointer">
-      <GithubIcon
-        className="m-2 h-8 w-8 stroke-black stroke-1"
-        onDragStart={() => false}
-      />
+      <GithubIcon className="m-2 h-8 w-8" onDragStart={() => false} />
     </button>
   </div>
 );
@@ -74,10 +61,10 @@ const NavbarLedIcon = () => {
   return (
     <div className="relative">
       <div className="absolute top-[50%] left-[50%]">
-        <LedShadow led={led} sizeMultiplier={2.0} />
+        <LedShadow led={led} sizeMultiplier={1.0} />
       </div>
       <LedIcon
-        className="relative h-16 w-16 stroke-black stroke-[1px]"
+        className="relative h-16 w-16 stroke-black stroke-[1px] transition-colors"
         style={{
           color: led?.color.getHex() ?? "#000000",
         }}

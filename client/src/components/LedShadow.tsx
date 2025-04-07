@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Led } from "../contexts/LedContext";
 
 export const LedShadow = ({
@@ -8,16 +8,18 @@ export const LedShadow = ({
   led?: Led;
   sizeMultiplier?: number;
 }) => {
-  const hex = led?.color.getHex() ?? "#000000";
-  const lightness = led?.color.getLightness() ?? 0;
-  const size = (32 / 2.0) * Math.pow(lightness, 0.5) * sizeMultiplier;
+  const hex = useMemo(() => led?.color.getHex() ?? "#000000", [led?.color]);
+  const size = useMemo(() => {
+    const lightness = led?.color.getLightness() ?? 0;
+    return (32 / 2.0) * Math.pow(lightness, 0.5) * sizeMultiplier;
+  }, [led?.color, sizeMultiplier]);
 
   const [glow, setGlow] = useState(false);
   const [prevColor, setPrevColor] = useState(hex);
   useEffect(() => {
     if (prevColor !== hex) {
       setGlow(true);
-      setTimeout(() => setGlow(false), 250);
+      setTimeout(() => setGlow(false), 100);
       setPrevColor(hex);
     }
   }, [prevColor, hex]);

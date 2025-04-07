@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LedIcon from "../../assets/light-bulb.svg?react";
 import { useEasel } from "../../contexts/EaselContext";
 import { useLeds } from "../../contexts/LedContext";
 import { useOnPointerMoved, usePointer } from "../../contexts/PointerContext";
 import { LedShadow } from "../../components/LedShadow";
 import { PointerEvent as ReactPointerEvent } from "react";
+import { useBreakpoints } from "../../contexts/BreakpointsContext";
+import { match } from "ts-pattern";
 
 export type CanvasConfig = {
   width: number;
@@ -105,20 +107,38 @@ export const LedCanvas = () => {
 
   useOnPointerMoved(handlePointerMove);
 
+  const { sm, lg } = useBreakpoints();
+  const ledShadowSizeMultipler = useMemo(
+    () =>
+      match({ sm, lg })
+        .with({ lg: true }, () => 1.0)
+        .with({ sm: true }, () => 0.75)
+        .otherwise(() => 0.5),
+    [sm, lg],
+  );
+
   return (
     <div
       ref={divRef}
       onPointerDown={handlePointerDown}
-      className="relative aspect-3/2 w-full touch-none bg-[url(/room.jpg)] bg-cover bg-center"
+      className="relative aspect-3/2 w-full touch-none bg-[url(/room.webp)] bg-cover bg-center"
     >
       <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
         {[...Array(config.top.leds)].map((_, index) => (
-          <LedShadow led={leds?.[index]} key={index} />
+          <LedShadow
+            led={leds?.[index]}
+            key={index}
+            sizeMultiplier={ledShadowSizeMultipler}
+          />
         ))}
       </div>
       <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
         {[...Array(config.right.leds)].map((_, index) => (
-          <LedShadow led={leds?.[index + config.top.leds]} key={index} />
+          <LedShadow
+            led={leds?.[index + config.top.leds]}
+            key={index}
+            sizeMultiplier={ledShadowSizeMultipler}
+          />
         ))}
       </div>
       <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
@@ -126,6 +146,7 @@ export const LedCanvas = () => {
           <LedShadow
             led={leds?.[index + config.top.leds + config.right.leds]}
             key={index}
+            sizeMultiplier={ledShadowSizeMultipler}
           />
         ))}
       </div>
@@ -138,6 +159,7 @@ export const LedCanvas = () => {
               ]
             }
             key={index}
+            sizeMultiplier={ledShadowSizeMultipler}
           />
         ))}
       </div>
@@ -182,6 +204,17 @@ export const LedCanvas = () => {
 const LedButtonIcon = ({ index }: { index: number }) => {
   const { leds } = useLeds();
   const led = useMemo(() => leds?.[index], [leds, index]);
+  const hex = useMemo(() => led?.color.getHex() ?? "#000000", [led?.color]);
+
+  const [float, setFloat] = useState(false);
+  const [prevColor, setPrevColor] = useState(hex);
+  useEffect(() => {
+    if (prevColor !== hex) {
+      setFloat(true);
+      setTimeout(() => setFloat(false), 300);
+      setPrevColor(hex);
+    }
+  }, [prevColor, hex]);
 
   return (
     <div className="relative h-0 w-0">
@@ -190,7 +223,7 @@ const LedButtonIcon = ({ index }: { index: number }) => {
         className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full"
       />
       <LedIcon
-        className="absolute h-4 w-4 -translate-x-[50%] -translate-y-[50%] stroke-black stroke-1 transition-transform sm:h-5 sm:w-5 lg:h-7 lg:w-7"
+        className={`${float ? "-translate-y-[75%]" : "-translate-y-[50%]"} absolute h-4 w-4 -translate-x-[50%] stroke-black stroke-1 transition-all sm:h-5 sm:w-5 lg:h-7 lg:w-7`}
         style={{
           color: led?.color.getHex() ?? "#000000",
         }}
