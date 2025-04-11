@@ -38,9 +38,12 @@ export const Navbar = () => (
         </nav>
       </div>
     </div>
-    <button className="border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:cursor-pointer">
+    <a
+      href={import.meta.env.VITE_GITHUB_REPOSITORY_URL}
+      className="border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] hover:cursor-pointer"
+    >
       <GithubIcon className="m-2 h-8 w-8" onDragStart={() => false} />
-    </button>
+    </a>
   </div>
 );
 
