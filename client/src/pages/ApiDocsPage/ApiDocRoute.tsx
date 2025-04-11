@@ -144,7 +144,7 @@ export function ApiDocRoute<K extends string>({
               <label className="w-min">{param.label}</label>
               <div className="space-x-2">
                 <input
-                  className={`h-fit w-min border ${result?.type === "websocket" && "cursor-not-allowed bg-stone-100"}`}
+                  className={`h-fit w-min border border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all outline-none focus:translate-[2px] focus:ring-0 focus:shadow-none ${result?.type === "websocket" ? "cursor-not-allowed bg-stone-200" : "bg-white"}`}
                   value={paramValues[param.label] ?? ""}
                   disabled={result?.type === "websocket"}
                   onChange={(event) => {
@@ -169,7 +169,7 @@ export function ApiDocRoute<K extends string>({
           requestType.type === "websocket" && result?.type === "websocket"
         ) && (
           <button
-            className={`rounded border p-1 hover:cursor-pointer ${match(
+            className={`border border-black p-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-[2px] hover:cursor-pointer hover:shadow-none ${match(
               requestType,
             )
               .with(
@@ -196,7 +196,7 @@ export function ApiDocRoute<K extends string>({
         )}
         {result !== undefined && (
           <button
-            className="rounded border bg-gray-100 p-1 hover:cursor-pointer hover:bg-gray-300"
+            className="border border-black bg-stone-100 p-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-[2px] hover:cursor-pointer hover:bg-stone-300 hover:shadow-none"
             type="button"
             onClick={() => setResult(undefined)}
           >
@@ -208,11 +208,13 @@ export function ApiDocRoute<K extends string>({
       </div>
       {match(result)
         .with({ type: "error" }, ({ error }) => (
-          <div className="rounded border bg-red-400 p-2">{error.message}</div>
+          <div className="border border-black bg-red-400 p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+            {error.message}
+          </div>
         ))
         .with({ type: "http" }, ({ response }) => (
           <div
-            className={`grid max-h-72 grid-cols-2 gap-x-2 overflow-x-scroll overflow-y-scroll rounded border p-2 ${
+            className={`grid max-h-72 grid-cols-2 gap-x-2 overflow-x-scroll overflow-y-scroll border border-black p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)] ${
               response.statusCode >= 200 && response.statusCode <= 299
                 ? "bg-green-100"
                 : "bg-red-100"
@@ -314,7 +316,7 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
   const freezeButton = useMemo(
     () => (
       <button
-        className={`rounded border p-1 hover:cursor-pointer ${frozen ? "bg-orange-100 hover:bg-orange-300" : "bg-teal-100 hover:bg-teal-300"}`}
+        className={`border border-black p-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-[2px] hover:cursor-pointer hover:shadow-none ${frozen ? "bg-orange-100 hover:bg-orange-300" : "bg-teal-100 hover:bg-teal-300"}`}
         type="button"
         onClick={() => setFrozen((frozen) => !frozen)}
       >
@@ -349,12 +351,14 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
       <div className="my-4 space-y-2 space-x-2">
         <label className="w-min whitespace-nowrap">Bytes (Hexadecimal)</label>
         <input
-          className={"h-fit w-min border"}
+          className={
+            "h-fit w-min border bg-white shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all outline-none focus:translate-[2px] focus:ring-0 focus:shadow-none"
+          }
           value={messageToSendHex}
           onChange={(event) => setMessageToSendHex(event.target.value)}
         />
         <button
-          className={`rounded border bg-purple-300 p-1 hover:cursor-pointer hover:bg-purple-500`}
+          className={`border bg-purple-300 p-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-[2px] hover:cursor-pointer hover:bg-purple-500 hover:shadow-none`}
           type="button"
           onClick={sendHexMessage}
         >
@@ -363,7 +367,7 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
         {sendMessageResult && (
           <>
             <button
-              className="rounded border bg-gray-100 p-1 hover:cursor-pointer hover:bg-gray-300"
+              className="border bg-gray-100 p-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-all hover:translate-[2px] hover:cursor-pointer hover:bg-gray-300 hover:shadow-none"
               type="button"
               onClick={() => setSendMessageResult(null)}
             >
@@ -371,12 +375,12 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
             </button>
             {match(sendMessageResult)
               .with({ type: "sent" }, ({ hexString, timestamp }) => (
-                <div className="rounded border bg-green-100 p-2">
+                <div className="border border-black bg-green-100 p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
                   Sent '{hexString}' at {timestamp.toLocaleString()}
                 </div>
               ))
               .with({ type: "error" }, ({ error }) => (
-                <div className="rounded border bg-red-400 p-2">
+                <div className="border bg-red-400 p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
                   {error.message}
                 </div>
               ))
@@ -385,7 +389,7 @@ const WsDemo = ({ endpoint, setError, freezeButtonPortal }: WsDemoProps) => {
         )}
       </div>
       <div
-        className={`grid h-max max-h-96 items-stretch overflow-scroll rounded border p-2 ${frozen && "bg-teal-50"}`}
+        className={`grid h-max max-h-96 items-stretch overflow-scroll border bg-white p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)] ${frozen && "bg-teal-50"}`}
         style={{
           gridTemplateColumns: "auto minmax(0,1fr)",
         }}
@@ -456,7 +460,7 @@ const WsMessageLine = ({
   return (
     <>
       <button
-        className={`cursor-pointer text-stone-400 ${alt && "bg-stone-200/50"} flex items-start rounded-l-md pr-2`}
+        className={`cursor-pointer text-stone-400 ${alt && "bg-stone-200/50"} flex items-start pr-2`}
         onClick={() => setExpanded((expanded) => !expanded)}
       >
         &nbsp;
@@ -465,7 +469,7 @@ const WsMessageLine = ({
         {timestamp.toLocaleTimeString()}
       </button>
       <span
-        className={`${!expanded && "overflow-hidden text-nowrap text-ellipsis whitespace-nowrap"} ${alt && "bg-stone-200/50"} rounded-r-md font-mono`}
+        className={`${!expanded && "overflow-hidden text-nowrap text-ellipsis whitespace-nowrap"} ${alt && "bg-stone-200/50"} font-mono`}
       >
         {hexString}
       </span>
