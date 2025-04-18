@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  build-public:
+  build-client:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,13 +25,16 @@ jobs:
 
       - run: pnpm build
         working-directory: ./client
+        env:
+          VITE_API_BASE_URL: https://controlmylights.btarr.xyz/api
+          VITE_GITHUB_RESPOSITORY_URL: https://github.com/${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: public
           path: ./client/dist
 
-  build-backend:
+  build-server:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
