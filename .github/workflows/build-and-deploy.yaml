@@ -66,6 +66,6 @@ jobs:
       - uses: actions/download-artifact@v4
       - run: ls -la
       - run: ls -la
-        working-directory: ./client
+        working-directory: ./public
       - run: ls -la
         working-directory: ./server
