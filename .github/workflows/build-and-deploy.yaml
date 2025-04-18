@@ -73,6 +73,7 @@ jobs:
       - uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           source: ./server/controlmylights
           target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
@@ -81,6 +82,7 @@ jobs:
       - uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           source: ./public/
           target: ${{ secrets.CONTROLMYLIGHTS_PUBLIC_TARGET }}
