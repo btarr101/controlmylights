@@ -27,7 +27,7 @@ jobs:
         working-directory: ./client
         env:
           VITE_API_BASE_URL: https://controlmylights.btarr.xyz/api
-          VITE_GITHUB_RESPOSITORY_URL: https://github.com/${{ github.repository }}
+          VITE_GITHUB_REPOSITORY_URL: https://github.com/${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
         with:
