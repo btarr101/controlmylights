@@ -65,3 +65,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
       - run: ls -la
+      - run: ls -la
+        working-directory: ./client
+      - run: ls -la
+        working-directory: ./server
