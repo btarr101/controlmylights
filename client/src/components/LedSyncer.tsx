@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useApi } from "../contexts/ApiContext";
-import { useLeds } from "../contexts/LedContext";
+import { useLeds, useLedUpdated } from "../contexts/LedContext";
 import Color from "ts-color-class";
 import { getLeds } from "../repo/api";
 
@@ -30,60 +30,30 @@ const LedSyncUpdater = () => {
   const { latestFetchedLeds, updateLed } = useApi();
   const { setColors, leds } = useLeds();
 
-  const timestampsRef = useRef<Date[]>([]);
   useEffect(() => {
     if (latestFetchedLeds) {
-      const timestamps = timestampsRef.current;
-      const newTimestamps = latestFetchedLeds.map(({ timestamp }) => timestamp);
-
+      const newColors: Color[] = [];
       let diff = false;
-      const newColors = latestFetchedLeds.map(({ color, timestamp }, index) => {
-        const currentTimestamp = timestamps[index];
-        const currentColor = leds?.[index]?.color;
 
-        if (
-          !currentColor ||
-          !currentTimestamp ||
-          timestamp > currentTimestamp
-        ) {
-          diff = true;
-          return new Color(color.red, color.green, color.blue);
-        } else {
-          return currentColor;
-        }
+      latestFetchedLeds.forEach(({ color: { red, green, blue } }, index) => {
+        const newColor = new Color(red, green, blue);
+
+        const oldColor = leds?.[index]?.color;
+        diff = diff || newColor.getHex() !== oldColor?.getHex();
+
+        newColors.push(newColor);
       });
 
+      // avoid infinite re-render
       if (diff) {
-        timestampsRef.current = newTimestamps.map((newTimestamp, index) => {
-          const oldTimestamp = timestamps[index];
-          return oldTimestamp && oldTimestamp > newTimestamp
-            ? oldTimestamp
-            : newTimestamp;
-        });
-
         setColors(newColors);
       }
     }
   }, [latestFetchedLeds, leds, setColors]);
 
-  const oldColors = useRef<Color[]>(undefined);
-  useEffect(() => {
-    if (leds) {
-      const colors = leds.map(({ color }) => color);
-      const currentOldColors = oldColors.current;
-
-      // Only calculate diff if this isn't the first render
-      if (currentOldColors !== undefined) {
-        colors.forEach((color, id) => {
-          if (color.getHex() !== currentOldColors[id]?.getHex()) {
-            updateLed({ id, color });
-          }
-        });
-      }
-
-      oldColors.current = colors;
-    }
-  }, [leds, oldColors, updateLed]);
+  useLedUpdated(({ index, color }) => {
+    updateLed({ id: index, color });
+  });
 
   return null;
 };

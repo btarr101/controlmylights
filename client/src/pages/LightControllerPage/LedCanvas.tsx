@@ -217,7 +217,7 @@ const LedButtonIcon = ({ index }: { index: number }) => {
   }, [prevColor, hex]);
 
   return (
-    <div className="relative h-0 w-0">
+    <div id={`led-${index}`} className="relative h-0 w-0">
       <div
         id={`led-hitbox-${index}`}
         className="absolute h-6 w-6 -translate-x-[50%] -translate-y-[50%] rounded-full"

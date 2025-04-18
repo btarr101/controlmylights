@@ -1,6 +1,12 @@
-import { PropsWithChildren, useMemo, useState } from "react";
+import {
+  PropsWithChildren,
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Color from "ts-color-class";
-import { LedContext } from "../contexts/LedContext";
+import { LedContext, LedUpdateCallback } from "../contexts/LedContext";
 
 export type LedProviderProps = {
   initialColors?: Color[];
@@ -11,6 +17,18 @@ export default function LedProvier({
   children,
 }: PropsWithChildren<LedProviderProps>) {
   const [colors, setColors] = useState(initialColors);
+
+  const ledUpdateListeners = useRef<LedUpdateCallback[]>([]);
+  const addLedUpdateListener = useCallback((callback: LedUpdateCallback) => {
+    console.log(ledUpdateListeners);
+    ledUpdateListeners.current.push(callback);
+  }, []);
+  const removeLedUpdateListener = useCallback((callback: LedUpdateCallback) => {
+    const index = ledUpdateListeners.current.indexOf(callback);
+    if (index !== -1) {
+      ledUpdateListeners.current.splice(index, 1);
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -26,11 +44,19 @@ export default function LedProvier({
               index === subIndex ? newColor : oldColor,
             ),
           );
+          ledUpdateListeners.current.forEach((callback) =>
+            callback({
+              index,
+              color: newColor,
+            }),
+          );
         },
       })),
       setColors,
+      addLedUpdateListener,
+      removeLedUpdateListener,
     }),
-    [colors],
+    [colors, addLedUpdateListener, removeLedUpdateListener],
   );
 
   return <LedContext.Provider value={value}>{children}</LedContext.Provider>;

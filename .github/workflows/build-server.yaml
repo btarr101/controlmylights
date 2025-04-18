@@ -1,0 +1,50 @@
+name: Build 🔨 & Deploy 🚀
+
+on: [push]
+
+jobs:
+  build-public:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: client
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 23
+          cache: "pnpm"
+
+      - run: |
+          pnpm install
+          pnpm build
+        working-directory: ./client
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public
+          path: ./client/dist
+
+  build-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: server
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ./.cargo/registry
+            ./.cargo/git
+            ./server/target
+          key: ${{ runner.os }}-server-${{ hashFiles('**/Cargo.lock') }}
+
+      - run: cargo build --verbose --release
+        working-directory: ./server
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server
+          path: ./server/release/controlmylights

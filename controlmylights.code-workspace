@@ -16,6 +16,10 @@
 			"name": "arduino_client",
 			"path": "arduino_client"
 		},
+		{
+			"name": "tests",
+			"path": "tests"
+		},
 	],
 	"settings": {
 		"files.associations": {
