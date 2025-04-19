@@ -64,20 +64,13 @@ jobs:
       - build-server
     steps:
       - uses: actions/download-artifact@v4
-      - run: ls -la
-      - run: ls -la
-        working-directory: ./public
-      - run: ls -la
-        working-directory: ./server
-
+      
       - uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            sudo systemctl stop controlmylights
-            touch /tmp/gha_controlmylights_stopped.flag
+          script: sudo systemctl stop controlmylights
 
       - uses: appleboy/scp-action@v0.1.7
         with:
@@ -88,6 +81,13 @@ jobs:
           target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
           overwrite: true
           strip_components: 2
+
+      - uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: sudo chmod 750 ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}/controlmylights
 
       - uses: appleboy/scp-action@v0.1.7
         with:
@@ -105,8 +105,4 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            if [ -f /tmp/gha_controlmylights_stopped.flag ]; then
-              sudo systemctl start controlmylights
-              rm /tmp/gha_controlmylights_stopped.flag
-            fi
+          script: sudo systemctl start controlmylights
