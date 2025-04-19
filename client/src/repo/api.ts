@@ -6,7 +6,7 @@ export type LedDTO = {
     green: number;
     blue: number;
   };
-  timestamp: Date;
+  last_updated: Date;
 };
 
 export const websocketOptions: Options = {
@@ -19,6 +19,10 @@ export const websocketOptions: Options = {
   },
 };
 
+type RawLedDTO = Omit<LedDTO, "last_updated"> & {
+  last_updated: string
+};
+
 export async function getLeds(): Promise<LedDTO[]> {
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/leds`);
 
@@ -26,7 +30,17 @@ export async function getLeds(): Promise<LedDTO[]> {
     throw new Error(response.statusText);
   }
 
-  const json = await response.json();
+  const json: RawLedDTO[] = await response.json();
 
-  return json;
+  return json.map(({ last_updated, ...otherData }) => ({
+    ...otherData,
+    // Parsing raw json sucks because it's not type hinted
+    // 
+    // (honestly really the DTO should not have a date, but an iso timestamp or something - but that's harder)
+    // 
+    // Issue was though that the initial population of leds using the API endpoint was getting ISO timestamp strings rather
+    // than dates, while the websocket API was correctly parsing whatever was gotten into dates - this messed with comparing
+    // timestamps on the client to choose if an led should be updated.
+    last_updated: new Date(last_updated)
+  }));
 }

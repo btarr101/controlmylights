@@ -58,6 +58,7 @@ jobs:
           path: ./server/target/release/controlmylights
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs:
       - build-client

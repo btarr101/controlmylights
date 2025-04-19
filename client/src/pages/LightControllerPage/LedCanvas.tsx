@@ -7,6 +7,7 @@ import { LedShadow } from "../../components/LedShadow";
 import { PointerEvent as ReactPointerEvent } from "react";
 import { useBreakpoints } from "../../contexts/BreakpointsContext";
 import { match } from "ts-pattern";
+import _ from "lodash";
 
 export type CanvasConfig = {
   width: number;
@@ -60,49 +61,55 @@ export const LedCanvas = () => {
 
   const divRef = useRef<HTMLDivElement>(null);
 
-  const forEachLedHitbox = useCallback(
-    (
-      clientX: number,
-      clientY: number,
-      callback: (ledHitBoxId: number) => void,
-    ) => {
-      const elements = document.elementsFromPoint(clientX, clientY);
+  const getLedHitboxes = useCallback((clientX: number, clientY: number) => {
+    const elements = document.elementsFromPoint(clientX, clientY);
 
-      const div = divRef.current;
-      if (div) {
-        elements
-          .filter((element) => element.id.startsWith("led-hitbox"))
-          .forEach((ledHitbox) => {
-            const ledHitboxId = parseInt(
-              ledHitbox.id.replace("led-hitbox-", ""),
-            );
-            callback(ledHitboxId);
-          });
-      }
+    const div = divRef.current;
+    return div
+      ? elements.filter((element) => element.id.startsWith("led-hitbox"))
+      : [];
+  }, []);
+
+  const getClosestLed = useCallback(
+    (clientX: number, clientY: number) => {
+      const ledHitboxes = getLedHitboxes(clientX, clientY);
+      const closestHitbox = _.maxBy(ledHitboxes, (hitbox) => {
+        const rect = hitbox.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+
+        return -Math.sqrt((x - clientX) ** 2 + (y - clientY) ** 2);
+      });
+
+      if (!closestHitbox) return null;
+
+      const ledHitboxId = parseInt(closestHitbox.id.replace("led-hitbox-", ""));
+      const led = leds?.[ledHitboxId];
+
+      return led ?? null;
     },
-    [],
+    [getLedHitboxes, leds],
   );
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent) => {
-      if (leds && activeSplotch?.color) {
-        forEachLedHitbox(event.clientX, event.clientY, (ledHitboxId) =>
-          leds[ledHitboxId]?.setColor(activeSplotch.color),
-        );
+      const color = activeSplotch?.color;
+      if (color) {
+        getClosestLed(event.clientX, event.clientY)?.setColor(color);
       }
     },
-    [activeSplotch?.color, forEachLedHitbox, leds],
+    [activeSplotch?.color, getClosestLed],
   );
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
-      if (leds && held && activeSplotch?.color) {
-        forEachLedHitbox(event.clientX, event.clientY, (ledHitboxId) => {
-          leds[ledHitboxId]?.setColor(activeSplotch.color);
-        });
+      const color = activeSplotch?.color;
+
+      if (held && color) {
+        getClosestLed(event.clientX, event.clientY)?.setColor(color);
       }
     },
-    [activeSplotch?.color, forEachLedHitbox, leds, held],
+    [activeSplotch?.color, getClosestLed, held],
   );
 
   useOnPointerMoved(handlePointerMove);
@@ -121,9 +128,10 @@ export const LedCanvas = () => {
     <div
       ref={divRef}
       onPointerDown={handlePointerDown}
-      className="relative aspect-3/2 w-full touch-none bg-[url(/room.webp)] bg-cover bg-center"
+      className="relative aspect-3/2 w-full touch-pinch-zoom bg-[url(/room.webp)] bg-cover bg-center"
     >
       <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
+        <div />
         {[...Array(config.top.leds)].map((_, index) => (
           <LedShadow
             led={leds?.[index]}
@@ -133,6 +141,7 @@ export const LedCanvas = () => {
         ))}
       </div>
       <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
+        <div />
         {[...Array(config.right.leds)].map((_, index) => (
           <LedShadow
             led={leds?.[index + config.top.leds]}
@@ -142,6 +151,7 @@ export const LedCanvas = () => {
         ))}
       </div>
       <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
+        <div />
         {[...Array(config.bottom.leds)].map((_, index) => (
           <LedShadow
             led={leds?.[index + config.top.leds + config.right.leds]}
@@ -151,6 +161,7 @@ export const LedCanvas = () => {
         ))}
       </div>
       <div className="absolute left-0 flex h-full w-0 flex-col-reverse items-center justify-between">
+        <div />
         {[...Array(config.left.leds)].map((_, index) => (
           <LedShadow
             led={
@@ -164,22 +175,16 @@ export const LedCanvas = () => {
         ))}
       </div>
       {/* Lights */}
-      <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
+      <div className="absolute left-[15%] flex w-[85%] items-center justify-between bg-blue-300">
+        <div />
         {[...Array(config.top.leds)].map((_, index) => (
           <LedButtonIcon index={index} key={index} />
         ))}
       </div>
       <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
+        <div />
         {[...Array(config.right.leds)].map((_, index) => (
           <LedButtonIcon index={index + config.top.leds} key={index} />
-        ))}
-      </div>
-      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
-        {[...Array(config.bottom.leds)].map((_, index) => (
-          <LedButtonIcon
-            index={index + config.top.leds + config.right.leds}
-            key={index}
-          />
         ))}
       </div>
       <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
@@ -193,6 +198,16 @@ export const LedCanvas = () => {
               config.right.leds +
               config.bottom.leds
             }
+            key={index}
+          />
+        ))}
+        <div />
+      </div>
+      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
+        <div />
+        {[...Array(config.bottom.leds)].map((_, index) => (
+          <LedButtonIcon
+            index={index + config.top.leds + config.right.leds}
             key={index}
           />
         ))}

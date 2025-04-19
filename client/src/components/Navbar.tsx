@@ -7,7 +7,7 @@ import _ from "lodash";
 import { LedShadow } from "./LedShadow";
 
 export const Navbar = () => (
-  <div className="justify-left z-10 flex items-center justify-between border-b-4 bg-white p-4">
+  <div className="justify-left z-10 flex items-center justify-between border-b-8 bg-white p-4">
     <div />
     <div className="flex flex-row items-center">
       <NavbarLedIcon />
@@ -67,7 +67,7 @@ const NavbarLedIcon = () => {
         <LedShadow led={led} sizeMultiplier={1.0} />
       </div>
       <LedIcon
-        className="relative h-16 w-16 stroke-black stroke-[1px] transition-colors"
+        className="relative h-16 w-16 stroke-black stroke-[0.5px] transition-colors"
         style={{
           color: led?.color.getHex() ?? "#000000",
         }}

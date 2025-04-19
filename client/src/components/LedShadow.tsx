@@ -27,7 +27,7 @@ export const LedShadow = ({
   return (
     <div className="relative h-0 w-0">
       <div
-        className="absolute h-0 w-0 -translate-x-[50%] -translate-y-[50%] rounded-full transition-shadow"
+        className="absolute h-0 w-0 -translate-x-[50%] -translate-y-[50%] transition-shadow"
         style={{
           boxShadow: `0px 0px 32px ${glow ? size * 1.2 : size}px ${hex}`,
         }}

@@ -12,7 +12,7 @@ export const LedSyncer = () => {
 
 const transformReceivedLedDTO = ({
   color: { red, green, blue },
-  timestamp,
+  last_updated: timestamp,
 }: LedDTO): LedData => ({
   color: new Color(red, green, blue),
   lastUpdateTimestamp: timestamp,
@@ -33,9 +33,6 @@ const LedSyncInitializer = () => {
 };
 
 const shouldUpdateLed = (oldLed: LedData, newLed: LedData) => {
-  // Same color - no need to update
-  if (oldLed.color.getHex() === newLed.color.getHex()) return false;
-
   // Newer timestamp - should update
   if (newLed.lastUpdateTimestamp >= oldLed.lastUpdateTimestamp) return true;
 
@@ -60,7 +57,11 @@ const LedSyncUpdater = () => {
           const oldLed = oldLeds?.[index];
           const newLed = transformReceivedLedDTO(ledDTO);
 
-          return !oldLed || shouldUpdateLed(oldLed, newLed) ? newLed : oldLed;
+          if (!oldLed) return newLed;
+
+          const shouldUpdate = shouldUpdateLed(oldLed, newLed);
+
+          return shouldUpdate ? newLed : oldLed;
         }),
       );
     }

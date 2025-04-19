@@ -10,14 +10,14 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
     websocketOptions,
   );
 
-  const [latestFetchedLeds, setLatestFetchedLeds] = useState<LedDTO[]>();
+  const [latestReceivedLeds, setLatestReceivedLeds] = useState<LedDTO[]>();
   useEffect(() => {
     if (lastMessage?.data) {
       (async () => {
         const buffer = await (lastMessage.data as Blob).arrayBuffer();
         const array = new Uint8Array(buffer);
 
-        const parsedFetchedLeds = _.chunk(array, 11).map(
+        const parsedLedDTOs = _.chunk(array, 11).map(
           ([red, green, blue, ...timestampBytes]) => {
             // ---------------------------------------------------------
             // |  Byte 0  |  Byte 1  |  Byte 2  |   Byte 3 - Byte 10   |
@@ -27,7 +27,7 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
             const dataView = new DataView(
               new Uint8Array(timestampBytes).buffer,
             );
-            const timestamp = new Date(
+            const last_updated = new Date(
               Number(dataView.getBigUint64(0, false)) * 1000,
             );
             return {
@@ -36,12 +36,12 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
                 green: number;
                 blue: number;
               },
-              timestamp,
+              last_updated,
             };
           },
         );
 
-        setLatestFetchedLeds(parsedFetchedLeds);
+        setLatestReceivedLeds(parsedLedDTOs);
       })();
     }
   }, [lastMessage]);
@@ -60,9 +60,9 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
           const high = (id >> 8) & 0xff;
           sendMessage(new Uint8Array([high, low, red, green, blue]));
         },
-        latestReceivedLeds: latestFetchedLeds,
+        latestReceivedLeds,
       }) as ApiState,
-    [latestFetchedLeds, sendMessage],
+    [latestReceivedLeds, sendMessage],
   );
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;

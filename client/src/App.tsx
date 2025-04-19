@@ -38,7 +38,7 @@ export const App = () => {
               <EaselSaver />
               <ApiProvider>
                 <LedSyncer />
-                <div className="pattern-dots pattern-stone-300 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
+                <div className="pattern-zigzag pattern-stone-100 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
                 <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
                   <Navbar />
                   <Routes>
