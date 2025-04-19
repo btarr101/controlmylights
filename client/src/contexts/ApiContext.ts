@@ -1,19 +1,19 @@
 import { createContext, useContext } from "react";
 import Color from "ts-color-class";
-import { FetchedLed } from "../repo/api";
+import { LedDTO } from "../repo/api";
 
-type UpdateLedParams = {
+type SendLedUpdateParams = {
   id: number;
   color: Color;
 };
 
 export type ApiState = {
-  updateLed: (params: UpdateLedParams) => Promise<void>;
-  latestFetchedLeds?: FetchedLed[];
+  sendLedUpdate: (params: SendLedUpdateParams) => Promise<void>;
+  latestReceivedLeds?: LedDTO[];
 };
 
 export const ApiContext = createContext<ApiState>({
-  updateLed: async () => {},
+  sendLedUpdate: async () => {},
 });
 
 export const useApi = () => useContext(ApiContext);

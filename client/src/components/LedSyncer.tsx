@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useApi } from "../contexts/ApiContext";
-import { useLeds, useLedUpdated } from "../contexts/LedContext";
+import { LedData, useLeds, useLedUpdated } from "../contexts/LedContext";
 import Color from "ts-color-class";
-import { getLeds } from "../repo/api";
+import { getLeds, LedDTO } from "../repo/api";
 
 export const LedSyncer = () => {
   const { leds } = useLeds();
@@ -10,49 +10,64 @@ export const LedSyncer = () => {
   return leds === undefined ? <LedSyncInitializer /> : <LedSyncUpdater />;
 };
 
+const transformReceivedLedDTO = ({
+  color: { red, green, blue },
+  timestamp,
+}: LedDTO): LedData => ({
+  color: new Color(red, green, blue),
+  lastUpdateTimestamp: timestamp,
+  lastUpdateSource: "server",
+});
+
 const LedSyncInitializer = () => {
-  const { setColors } = useLeds();
+  const { updateLeds } = useLeds();
 
   useEffect(() => {
     (async () => {
-      const fetchedLeds = await getLeds();
-      const initialColors = fetchedLeds.map(
-        ({ color: { red, green, blue } }) => new Color(red, green, blue),
-      );
-      setColors(initialColors);
+      const ledDTOs = await getLeds();
+      updateLeds(() => ledDTOs.map(transformReceivedLedDTO));
     })();
-  }, [setColors]);
+  }, [updateLeds]);
 
   return null;
 };
 
+const shouldUpdateLed = (oldLed: LedData, newLed: LedData) => {
+  // Same color - no need to update
+  if (oldLed.color.getHex() === newLed.color.getHex()) return false;
+
+  // Newer timestamp - should update
+  if (newLed.lastUpdateTimestamp >= oldLed.lastUpdateTimestamp) return true;
+
+  // If the client set timestamp is over a second old, discard it and use the new led.
+  if (
+    oldLed.lastUpdateSource === "client" &&
+    new Date().getTime() - oldLed.lastUpdateTimestamp.getTime() > 1000
+  )
+    return true;
+
+  return false;
+};
+
 const LedSyncUpdater = () => {
-  const { latestFetchedLeds, updateLed } = useApi();
-  const { setColors, leds } = useLeds();
+  const { latestReceivedLeds, sendLedUpdate } = useApi();
+  const { updateLeds } = useLeds();
 
   useEffect(() => {
-    if (latestFetchedLeds) {
-      const newColors: Color[] = [];
-      let diff = false;
+    if (latestReceivedLeds) {
+      updateLeds((oldLeds) =>
+        latestReceivedLeds.map((ledDTO, index) => {
+          const oldLed = oldLeds?.[index];
+          const newLed = transformReceivedLedDTO(ledDTO);
 
-      latestFetchedLeds.forEach(({ color: { red, green, blue } }, index) => {
-        const newColor = new Color(red, green, blue);
-
-        const oldColor = leds?.[index]?.color;
-        diff = diff || newColor.getHex() !== oldColor?.getHex();
-
-        newColors.push(newColor);
-      });
-
-      // avoid infinite re-render
-      if (diff) {
-        setColors(newColors);
-      }
+          return !oldLed || shouldUpdateLed(oldLed, newLed) ? newLed : oldLed;
+        }),
+      );
     }
-  }, [latestFetchedLeds, leds, setColors]);
+  }, [latestReceivedLeds, updateLeds]);
 
   useLedUpdated(({ index, color }) => {
-    updateLed({ id: index, color });
+    sendLedUpdate({ id: index, color });
   });
 
   return null;

@@ -1,6 +1,6 @@
 import { Options } from "react-use-websocket";
 
-export type FetchedLed = {
+export type LedDTO = {
   color: {
     red: number;
     green: number;
@@ -19,7 +19,7 @@ export const websocketOptions: Options = {
   },
 };
 
-export async function getLeds(): Promise<FetchedLed[]> {
+export async function getLeds(): Promise<LedDTO[]> {
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/leds`);
 
   if (!response.ok) {

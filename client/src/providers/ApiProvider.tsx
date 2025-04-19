@@ -2,7 +2,7 @@ import useWebSocket from "react-use-websocket";
 import { ApiContext, ApiState } from "../contexts/ApiContext";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
-import { FetchedLed, websocketOptions } from "../repo/api";
+import { LedDTO, websocketOptions } from "../repo/api";
 
 export default function ApiProvider({ children }: React.PropsWithChildren) {
   const { sendMessage, lastMessage } = useWebSocket(
@@ -10,7 +10,7 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
     websocketOptions,
   );
 
-  const [latestFetchedLeds, setLatestFetchedLeds] = useState<FetchedLed[]>();
+  const [latestFetchedLeds, setLatestFetchedLeds] = useState<LedDTO[]>();
   useEffect(() => {
     if (lastMessage?.data) {
       (async () => {
@@ -49,7 +49,7 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
   const value = useMemo(
     () =>
       ({
-        updateLed: ({ id, color }) => {
+        sendLedUpdate: ({ id, color }) => {
           // ------------------------------------------------------
           // |  Byte 0 - Byte 1  |  Byte 2  |  Byte 3  |  Byte 4  |
           // ------------------------------------------------------
@@ -60,7 +60,7 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
           const high = (id >> 8) & 0xff;
           sendMessage(new Uint8Array([high, low, red, green, blue]));
         },
-        latestFetchedLeds,
+        latestReceivedLeds: latestFetchedLeds,
       }) as ApiState,
     [latestFetchedLeds, sendMessage],
   );

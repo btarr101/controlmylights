@@ -103,11 +103,11 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      # - name: Start service
-      #   uses: appleboy/ssh-action@v0.1.7
-      #   if: always()
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_KEY }}
-      #     script: sudo systemctl start controlmylights
+      - name: Start service
+        uses: appleboy/ssh-action@v0.1.7
+        if: always()
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: sudo systemctl start controlmylights
