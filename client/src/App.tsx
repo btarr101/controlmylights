@@ -1,14 +1,16 @@
 import Color from "ts-color-class";
 import EaselProvider from "./providers/EaselProvider";
-import MouseProvider from "./providers/MouseProvider";
+import PointerProvider from "./providers/PointerProvider";
 import LedProvier from "./providers/LedProvider";
 import { loadEasel, SavedEasel } from "./repo/easel";
 import { EaselSaver } from "./components/EaselSaver";
 import ApiProvider from "./providers/ApiProvider";
 import { LedSyncer } from "./components/LedSyncer";
-import { Navigate, NavLink, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { LightControllerPage } from "./pages/LightControllerPage";
 import { ApiDocsPage } from "./pages/ApiDocsPage";
+import { Navbar } from "./components/Navbar";
+import BreakpointsProvider from "./providers/BreakpointsProvider";
 
 export const App = () => {
   const savedEasel =
@@ -25,62 +27,34 @@ export const App = () => {
     } as SavedEasel);
 
   return (
-    <MouseProvider>
-      <EaselProvider
-        initialActiveSplotchIndex={savedEasel.activeSplotchIndex}
-        initialColors={savedEasel.colors.map((hex) => new Color(hex))}
-      >
-        <LedProvier>
-          <EaselSaver />
-          <ApiProvider>
-            <LedSyncer />
-            <div className="mx-1 flex min-h-screen min-w-sm flex-col justify-center">
-              <div className="space-y-2 py-4">
-                <header className="text-center text-2xl">
-                  Control My Lights
-                </header>
-                <nav className="text-center">
-                  {[
-                    { label: "Controller", path: "/" },
-                    { label: "Api Docs", path: "/apidocs" },
-                  ].flatMap(({ label, path }, index, array) => {
-                    const navlink = (
-                      <NavLink
-                        key={2 * index}
-                        to={path}
-                        end
-                        className={({ isActive }) =>
-                          isActive
-                            ? "cursor-default text-gray-400"
-                            : "text-blue-400 hover:underline"
-                        }
-                      >
-                        {label}
-                      </NavLink>
-                    );
-
-                    return index + 1 === array.length
-                      ? navlink
-                      : [
-                          navlink,
-                          <span key={2 * index + 1} className="text-gray-400">
-                            {" "}
-                            |{" "}
-                          </span>,
-                        ];
-                  })}
-                </nav>
-              </div>
-
-              <Routes>
-                <Route index element={<LightControllerPage />} />
-                <Route path="apidocs" element={<ApiDocsPage />} />
-                <Route path="*" element={<Navigate to="/" replace={true} />} />
-              </Routes>
-            </div>
-          </ApiProvider>
-        </LedProvier>
-      </EaselProvider>
-    </MouseProvider>
+    <BrowserRouter>
+      <PointerProvider>
+        <BreakpointsProvider>
+          <EaselProvider
+            initialSplotchIndex={savedEasel.activeSplotchIndex}
+            initialColors={savedEasel.colors.map((hex) => new Color(hex))}
+          >
+            <LedProvier>
+              <EaselSaver />
+              <ApiProvider>
+                <LedSyncer />
+                <div className="pattern-zigzag pattern-stone-100 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
+                <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
+                  <Navbar />
+                  <Routes>
+                    <Route index element={<LightControllerPage />} />
+                    <Route path="apidocs" element={<ApiDocsPage />} />
+                    <Route
+                      path="*"
+                      element={<Navigate to="/" replace={true} />}
+                    />
+                  </Routes>
+                </div>
+              </ApiProvider>
+            </LedProvier>
+          </EaselProvider>
+        </BreakpointsProvider>
+      </PointerProvider>
+    </BrowserRouter>
   );
 };

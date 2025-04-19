@@ -79,39 +79,4 @@ impl LedRepo {
             leds: self.0.leds.read().await.clone(),
         }
     }
-
-    #[instrument(skip(self), level=Level::INFO)]
-    pub async fn resize(&self, len: usize) {
-        let mut lock = self.0.leds.write().await;
-        if lock.len() == len {
-            return;
-        }
-
-        lock.resize(
-            len,
-            Led {
-                color: Color {
-                    red: 255,
-                    green: 255,
-                    blue: 255,
-                },
-                last_updated: Utc::now(),
-            },
-        );
-        lock.shrink_to_fit();
-
-        tracing::info!("Resized led repo");
-    }
-}
-
-impl From<LedRepoSnapshot> for LedRepo {
-    fn from(value: LedRepoSnapshot) -> Self {
-        let generation = value.generation;
-        let leds = value.leds;
-
-        Self(Arc::new(LedRepoInner {
-            generation: generation.into(),
-            leds: RwLock::new(leds),
-        }))
-    }
 }

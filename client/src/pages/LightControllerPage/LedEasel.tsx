@@ -1,5 +1,5 @@
 import Color from "ts-color-class";
-import { Splotch, useEasel } from "./contexts/EaselContext";
+import { Splotch, useEasel } from "../../contexts/EaselContext";
 import { HexColorPicker } from "react-colorful";
 import { useMemo } from "react";
 import _ from "lodash";
@@ -15,9 +15,9 @@ export const LedEasel = () => {
 
   return (
     activeSplotch && (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-row items-center md:flex-col">
         <HexColorPicker
-          className="border-1"
+          className="border-1 shadow-[8px_8px_0px_rgba(0,0,0,1)]"
           color={activeSplotch.color.getHex()}
           onChange={(hex) => activeSplotch.setColor(new Color(hex))}
         />
@@ -43,7 +43,7 @@ const SplotchButton = ({ splotch }: SplotchButtonProps) => {
   return (
     <div className="flex h-9 w-9 items-center justify-center">
       <button
-        className={`rounded-full border-1 ${
+        className={`rounded-full border-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] transition-[width,height] ${
           splotch.active ? "h-9 w-9" : "h-7 w-7 cursor-pointer"
         }`}
         style={{

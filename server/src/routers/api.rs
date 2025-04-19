@@ -20,7 +20,7 @@ use futures::{
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use tokio::{spawn, sync::Mutex, time::sleep};
-use tracing::{error, info, info_span, instrument, Instrument};
+use tracing::{error, info, info_span, Instrument};
 use uuid::Uuid;
 
 use crate::{
@@ -208,7 +208,6 @@ struct HandleMessageResult {
     send_pong: bool,
 }
 
-#[instrument(skip(leds), ret)]
 async fn handle_message(message: Message, leds: LedRepo) -> HandleMessageResult {
     let mut close_handler = false;
     let mut send_pong = false;

@@ -1,77 +1,23 @@
-use multiple_errors::return_multiple_errors;
-use shuttle_runtime::SecretStore;
+use std::{env, path::PathBuf};
 
-#[derive(Debug)]
+use serde::Deserialize;
+use serde_inline_default::serde_inline_default;
+
+#[serde_inline_default]
+#[derive(Debug, Deserialize)]
 pub struct Config {
-    pub service_name: &'static str,
-    pub stage: &'static str,
-    pub otlp_endpoint: String,
-    pub otlp_username: String,
-    pub otlp_password: String,
-    pub ipinfo_token: String,
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum NewConfigError {
-    #[error("Invalid secrets: {0:?}")]
-    InvalidSecrets(Vec<SecretStoreObtainError>),
-}
-
-impl TryFrom<&SecretStore> for Config {
-    type Error = NewConfigError;
-
-    fn try_from(secret_store: &SecretStore) -> Result<Config, Self::Error> {
-        return_multiple_errors!(
-            let mut errors: Vec<SecretStoreObtainError> = vec![];
-            let otlp_endpoint = secret_store.obtain("OTLP_ENDPOINT");
-            let otlp_username = secret_store.obtain("OTLP_USERNAME");
-            let otlp_password = secret_store.obtain("OTLP_PASSWORD");
-            let ipinfo_token = secret_store.obtain("IPINFO_TOKEN");
-            if_there_are_errors {
-                return Err(NewConfigError::InvalidSecrets(errors));
-            }
-        );
-
-        let service_name = env!("CARGO_CRATE_NAME");
-
-        let stage = if cfg!(debug_assertions) {
-            "dev"
-        } else {
-            "prod"
-        };
-
-        let config = Config {
-            service_name,
-            stage,
-            otlp_endpoint,
-            otlp_username,
-            otlp_password,
-            ipinfo_token,
-        };
-
-        Ok(config)
-    }
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum SecretStoreObtainError {
-    #[error("Secret {0} is missing")]
-    MissingSecret(String),
-    #[error("Value for secret {0} is invalid")]
-    InvalidSecret(String),
-}
-
-trait SecretStoreExt {
-    fn obtain<T: for<'a> TryFrom<&'a str>>(&self, key: &str) -> Result<T, SecretStoreObtainError>;
-}
-
-impl SecretStoreExt for SecretStore {
-    fn obtain<T: for<'a> TryFrom<&'a str>>(&self, key: &str) -> Result<T, SecretStoreObtainError> {
-        self.get(key)
-            .ok_or(SecretStoreObtainError::MissingSecret(key.to_string()))
-            .and_then(|value| {
-                T::try_from(value.as_str())
-                    .map_err(|_| SecretStoreObtainError::InvalidSecret(key.to_string()))
-            })
-    }
+    #[serde_inline_default(env!("CARGO_CRATE_NAME").to_string())]
+    pub service_name: String,
+    #[serde_inline_default("127.0.0.1:3000".to_string())]
+    pub bind_address: String,
+    #[serde_inline_default(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("public"))]
+    pub public_dir: PathBuf,
+    #[serde_inline_default(if cfg!(debug_assertions) { "dev".to_string() } else { "prod".to_string() })]
+    pub stage: String,
+    #[serde(default)]
+    pub otlp_endpoint: Option<String>,
+    #[serde(default)]
+    pub otlp_authorization_header: Option<String>,
+    #[serde(default)]
+    pub ipinfo_token: Option<String>,
 }

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { ApiDocRoute } from "../components/ApiDocRoute";
+import { ApiDocRoute } from "./ApiDocRoute";
 
 export const ApiDocsPage = () => (
-  <div className="container mx-auto my-2 mb-32 flex max-w-2xl flex-1 flex-col space-y-8">
+  <div className="container mx-auto my-2 mb-32 flex max-w-3xl flex-1 flex-col space-y-8 px-2">
     <ApiDocRoute
       path="/api/leds"
       requestType={{
@@ -93,7 +93,7 @@ const WsDocRouteDescription = () => {
       <br />
       <br />
       <button
-        className={`flex cursor-pointer items-start rounded-l-md pr-2 text-stone-400`}
+        className={`flex cursor-pointer items-start pr-2 text-stone-400`}
         onClick={() => setDetailsExposed((detailsExposed) => !detailsExposed)}
       >
         &nbsp;
@@ -101,7 +101,7 @@ const WsDocRouteDescription = () => {
         &nbsp; Further details
       </button>
       {detailsExposed && (
-        <div className="m-2 overflow-x-scroll rounded-md bg-stone-100 p-2">
+        <div className="m-2 overflow-x-scroll border bg-stone-100 p-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
           Snapshots w/ timestamps (assumed by default when connecting) are
           BINARY websocket payloads that take on the following form:
           {/* prettier-ignore */}

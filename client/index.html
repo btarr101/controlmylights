@@ -4,11 +4,13 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/light-bulb-generated.svg" />
+  <link rel="preload" fetchpriority="high" as="image" href="/room.webp">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Application to control the lights in my room" />
   <title>Control My Lights</title>
 </head>
 
-<body class="overscroll-x-none">
+<body class="touch-pinch-zoom overscroll-none">
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
