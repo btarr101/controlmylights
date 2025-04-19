@@ -76,10 +76,9 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           source: ./server/controlmylights
-          # target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
-          target: /home/gha/
+          target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
           overwrite: true
-          debug: true
+          strip_components: true
 
       - uses: appleboy/scp-action@v0.1.7
         with:
@@ -89,4 +88,4 @@ jobs:
           source: ./public/
           target: ${{ secrets.CONTROLMYLIGHTS_PUBLIC_TARGET }}
           overwrite: true
-          debug: true
+          strip_components: true
