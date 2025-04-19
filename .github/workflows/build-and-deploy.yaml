@@ -64,15 +64,17 @@ jobs:
       - build-server
     steps:
       - uses: actions/download-artifact@v4
-      
-      - uses: appleboy/ssh-action@v0.1.7
+
+      - name: Stop service
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script: sudo systemctl stop controlmylights
 
-      - uses: appleboy/scp-action@v0.1.7
+      - name: Upload new server
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -82,14 +84,16 @@ jobs:
           overwrite: true
           strip_components: 2
 
-      - uses: appleboy/ssh-action@v0.1.7
+      - name: Make executable
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
-          script: sudo chmod 750 ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}/controlmylights
+          script: sudo chmod 751 ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}/controlmylights
 
-      - uses: appleboy/scp-action@v0.1.7
+      - name: Upload new public
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -99,10 +103,11 @@ jobs:
           overwrite: true
           strip_components: 1
 
-      - uses: appleboy/ssh-action@v0.1.7
-        if: always()
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: sudo systemctl start controlmylights
+      # - name: Start service
+      #   uses: appleboy/ssh-action@v0.1.7
+      #   if: always()
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_KEY }}
+      #     script: sudo systemctl start controlmylights
