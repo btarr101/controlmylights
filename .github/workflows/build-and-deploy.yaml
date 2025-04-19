@@ -78,7 +78,7 @@ jobs:
           source: ./server/controlmylights
           target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
           overwrite: true
-          strip_components: 1
+          strip_components: 2
 
       - uses: appleboy/scp-action@v0.1.7
         with:
@@ -88,4 +88,4 @@ jobs:
           source: ./public/
           target: ${{ secrets.CONTROLMYLIGHTS_PUBLIC_TARGET }}
           overwrite: true
-          strip_components: true
+          strip_components: 1
