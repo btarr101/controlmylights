@@ -77,7 +77,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           source: ./server/controlmylights
           # target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
-          target: ~
+          target: /home/gha/
           overwrite: true
           debug: true
 
