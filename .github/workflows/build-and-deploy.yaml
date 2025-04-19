@@ -76,7 +76,8 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           source: ./server/controlmylights
-          target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
+          # target: ${{ secrets.CONTROLMYLIGHTS_BINARY_TARGET }}
+          target: ~
           overwrite: true
           debug: true
 
