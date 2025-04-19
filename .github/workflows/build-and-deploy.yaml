@@ -70,6 +70,15 @@ jobs:
       - run: ls -la
         working-directory: ./server
 
+      - uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            sudo systemctl stop controlmylights
+            touch /tmp/gha_controlmylights_stopped.flag
+
       - uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -89,3 +98,15 @@ jobs:
           target: ${{ secrets.CONTROLMYLIGHTS_PUBLIC_TARGET }}
           overwrite: true
           strip_components: 1
+
+      - uses: appleboy/ssh-action@v0.1.7
+        if: always()
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            if [ -f /tmp/gha_controlmylights_stopped.flag ]; then
+              sudo systemctl start controlmylights
+              rm /tmp/gha_controlmylights_stopped.flag
+            fi
