@@ -8,6 +8,7 @@ import { PointerEvent as ReactPointerEvent } from "react";
 import { useBreakpoints } from "../../contexts/BreakpointsContext";
 import { match } from "ts-pattern";
 import _ from "lodash";
+import { useLedConfig } from "../../contexts/LedConfigContext";
 
 export type CanvasConfig = {
   width: number;
@@ -31,35 +32,95 @@ export type CanvasWallConfig = {
   startOffsetPercent?: number;
 };
 
-const config: CanvasConfig = {
-  width: 960,
-  height: 640,
-  ledSize: 24,
-  margin: 12,
-  top: {
-    leds: 38,
-    startOffsetPercent: 20,
-  },
-  right: {
-    leds: 32,
-  },
-  bottom: {
-    leds: 49,
-  },
-  left: {
-    leds: 31,
-  },
-} as const;
-
 /**
  * Shit like this makes me hate html and css.
  */
 export const LedCanvas = () => {
+  const {
+    ledConfig: { bgImage, lightLocations },
+  } = useLedConfig();
   const { leds } = useLeds();
   const { activeSplotch } = useEasel();
   const { held } = usePointer();
 
   const divRef = useRef<HTMLDivElement>(null);
+
+  // Leaving this "debuggy code here for now"
+  //
+  // useEffect(() => {
+  //   function squareSpiralPoints(count) {
+  //     const points = [];
+
+  //     let x = 0;
+  //     let y = 0;
+  //     let dx = 1;
+  //     let dy = 0;
+
+  //     let segmentLength = 1;
+  //     let segmentPassed = 0;
+  //     let segmentCount = 0;
+
+  //     for (let i = 0; i < count; i++) {
+  //       points.push({ x, y });
+
+  //       x += dx;
+  //       y += dy;
+  //       segmentPassed++;
+
+  //       if (segmentPassed === segmentLength) {
+  //         segmentPassed = 0;
+  //         // rotate direction 90°
+  //         [dx, dy] = [-dy, dx];
+  //         segmentCount++;
+
+  //         // increase segment length every 2 turns
+  //         if (segmentCount % 2 === 0) {
+  //           segmentLength++;
+  //         }
+  //       }
+  //     }
+
+  //     // normalize to [0,1]
+  //     const xs = points.map((p) => p.x);
+  //     const ys = points.map((p) => p.y);
+  //     const minX = Math.min(...xs);
+  //     const maxX = Math.max(...xs);
+  //     const minY = Math.min(...ys);
+  //     const maxY = Math.max(...ys);
+
+  //     return points.map((p) => ({
+  //       x: (p.x - minX) / (maxX - minX),
+  //       y: (p.y - minY) / (maxY - minY),
+  //     }));
+  //   }
+
+  //   console.log(squareSpiralPoints(500));
+
+  //   if (!divRef.current) return;
+
+  //   const boundingRect = divRef.current.getBoundingClientRect();
+  //   const elements = divRef.current.querySelectorAll('[id^="led-hitbox"]');
+
+  //   // elements is a NodeList
+  //   console.log(
+  //     [...elements]
+  //       .sort(
+  //         (a, b) =>
+  //           parseInt(a.id.replace("led-hitbox-", "")) -
+  //           parseInt(b.id.replace("led-hitbox-", "")),
+  //       )
+  //       .map((element) => {
+  //         const rect = element.getBoundingClientRect();
+  //         const x = rect.left + rect.width / 2;
+  //         const y = rect.top + rect.height / 2;
+
+  //         return {
+  //           x: (x - boundingRect.x) / boundingRect.width,
+  //           y: (y - boundingRect.y) / boundingRect.height,
+  //         };
+  //       }),
+  //   );
+  // }, []);
 
   const getLedHitboxes = useCallback((clientX: number, clientY: number) => {
     const elements = document.elementsFromPoint(clientX, clientY);
@@ -124,94 +185,54 @@ export const LedCanvas = () => {
     [sm, lg],
   );
 
+  const sortedLocations = useMemo(
+    () =>
+      lightLocations
+        .map((location, index) => ({ index, ...location }))
+        .sort((a, b) => a.y - b.y),
+    [lightLocations],
+  );
+
   return (
     <div
       ref={divRef}
       onPointerDown={handlePointerDown}
-      className="relative aspect-3/2 w-full touch-pinch-zoom bg-[url(/room.webp)] bg-cover bg-center"
+      className={`relative aspect-3/2 w-full touch-pinch-zoom bg-cover bg-center`}
+      style={{
+        backgroundImage: `url(/${bgImage})`,
+      }}
     >
-      <div className="absolute left-[15%] flex h-0 w-[85%] items-center justify-between">
-        <div />
-        {[...Array(config.top.leds)].map((_, index) => (
+      {/* Shadows */}
+      {sortedLocations.map((location) => (
+        <div
+          key={location.index}
+          style={{
+            position: "absolute",
+            zIndex: location.y * 100,
+            top: `${location.y * 100}%`,
+            left: `${location.x * 100}%`,
+          }}
+        >
           <LedShadow
-            led={leds?.[index]}
-            key={index}
+            led={leds?.[location.index]}
             sizeMultiplier={ledShadowSizeMultipler}
           />
-        ))}
-      </div>
-      <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
-        <div />
-        {[...Array(config.right.leds)].map((_, index) => (
-          <LedShadow
-            led={leds?.[index + config.top.leds]}
-            key={index}
-            sizeMultiplier={ledShadowSizeMultipler}
-          />
-        ))}
-      </div>
-      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
-        <div />
-        {[...Array(config.bottom.leds)].map((_, index) => (
-          <LedShadow
-            led={leds?.[index + config.top.leds + config.right.leds]}
-            key={index}
-            sizeMultiplier={ledShadowSizeMultipler}
-          />
-        ))}
-      </div>
-      <div className="absolute left-0 flex h-full w-0 flex-col-reverse items-center justify-between">
-        <div />
-        {[...Array(config.left.leds)].map((_, index) => (
-          <LedShadow
-            led={
-              leds?.[
-                index + config.top.leds + config.right.leds + config.bottom.leds
-              ]
-            }
-            key={index}
-            sizeMultiplier={ledShadowSizeMultipler}
-          />
-        ))}
-      </div>
+        </div>
+      ))}
       {/* Lights */}
-      <div className="absolute left-[15%] flex w-[85%] items-center justify-between bg-blue-300">
-        <div />
-        {[...Array(config.top.leds)].map((_, index) => (
-          <LedButtonIcon index={index} key={index} />
-        ))}
-      </div>
-      <div className="absolute right-0 flex h-full w-0 flex-col items-center justify-between">
-        <div />
-        {[...Array(config.right.leds)].map((_, index) => (
-          <LedButtonIcon index={index + config.top.leds} key={index} />
-        ))}
-      </div>
-      <div className="absolute left-0 flex h-full w-0 flex-col items-center justify-between">
-        {[...Array(config.left.leds)].map((_, index) => (
-          <LedButtonIcon
-            index={
-              config.left.leds -
-              1 -
-              index +
-              config.top.leds +
-              config.right.leds +
-              config.bottom.leds
-            }
-            key={index}
-          />
-        ))}
-        <div />
-      </div>
-      <div className="absolute bottom-0 flex h-0 w-full flex-row-reverse items-center justify-between">
-        <div />
-        {[...Array(config.bottom.leds)].map((_, index) => (
-          <LedButtonIcon
-            index={index + config.top.leds + config.right.leds}
-            key={index}
-          />
-        ))}
-      </div>
+      {sortedLocations.map((location) => (
+        <div
+          key={location.index}
+          style={{
+            position: "absolute",
+            zIndex: location.y * 100,
+            top: `${location.y * 100}%`,
+            left: `${location.x * 100}%`,
+          }}
+        >
+          <LedButtonIcon index={location.index} />
+        </div>
+      ))}
     </div>
   );
 };

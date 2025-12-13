@@ -1,10 +1,13 @@
 import { NavLink } from "react-router";
 import GithubIcon from "../assets/github-mark.svg?react";
 import LedIcon from "../assets/light-bulb.svg?react";
+import TreeIcon from "../assets/xmas-tree.svg?react";
 import { useLeds } from "../contexts/LedContext";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import _ from "lodash";
 import { LedShadow } from "./LedShadow";
+import { useLedConfig } from "../contexts/LedConfigContext";
+import { match } from "ts-pattern";
 
 export const Navbar = () => (
   <div className="justify-left z-10 flex items-center justify-between border-b-8 bg-white p-4">
@@ -48,6 +51,7 @@ export const Navbar = () => (
 );
 
 const NavbarLedIcon = () => {
+  const { ledConfig, setLedConfig } = useLedConfig();
   const { leds } = useLeds();
 
   const prevLedCount = useRef(leds?.length);
@@ -61,17 +65,30 @@ const NavbarLedIcon = () => {
   }, [leds?.length]);
   const led = useMemo(() => leds?.[ledIndex], [leds, ledIndex]);
 
+  const iconProps = {
+    className:
+      "relative h-16 w-16 stroke-black stroke-[0.5px] transition-colors",
+    style: {
+      color: led?.color.getHex() ?? "#000000",
+    },
+  };
+
   return (
     <div className="relative">
       <div className="absolute top-[50%] left-[50%]">
         <LedShadow led={led} sizeMultiplier={1.0} />
       </div>
-      <LedIcon
-        className="relative h-16 w-16 stroke-black stroke-[0.5px] transition-colors"
-        style={{
-          color: led?.color.getHex() ?? "#000000",
-        }}
-      />
+      {match(ledConfig.label)
+        .with("Christmas Tree", () => (
+          <TreeIcon {...iconProps} onClick={() => setLedConfig("Shed")} />
+        ))
+        .with("Shed", () => (
+          <LedIcon
+            {...iconProps}
+            onClick={() => setLedConfig("Christmas Tree")}
+          />
+        ))
+        .exhaustive()}
     </div>
   );
 };

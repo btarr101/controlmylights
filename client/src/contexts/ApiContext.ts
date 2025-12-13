@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import Color from "ts-color-class";
 import { LedDTO } from "../repo/api";
+import { LedConfigLabel, useLedConfig } from "./LedConfigContext";
 
 type SendLedUpdateParams = {
   id: number;
@@ -12,8 +13,18 @@ export type ApiState = {
   latestReceivedLeds?: LedDTO[];
 };
 
-export const ApiContext = createContext<ApiState>({
-  sendLedUpdate: async () => {},
+export type FullApiState = Record<LedConfigLabel, ApiState>;
+
+export const ApiContext = createContext<FullApiState>({
+  "Christmas Tree": {
+    sendLedUpdate: async () => {},
+  },
+  Shed: {
+    sendLedUpdate: async () => {},
+  },
 });
 
-export const useApi = () => useContext(ApiContext);
+export const useApi = () => {
+  const { ledConfig } = useLedConfig();
+  return useContext(ApiContext)[ledConfig.label];
+};

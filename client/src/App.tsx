@@ -11,6 +11,8 @@ import { LightControllerPage } from "./pages/LightControllerPage";
 import { ApiDocsPage } from "./pages/ApiDocsPage";
 import { Navbar } from "./components/Navbar";
 import BreakpointsProvider from "./providers/BreakpointsProvider";
+import { LedConfigProvider } from "./providers/LedConfigProvider";
+import { useLedConfig } from "./contexts/LedConfigContext";
 
 export const App = () => {
   const savedEasel =
@@ -34,27 +36,34 @@ export const App = () => {
             initialSplotchIndex={savedEasel.activeSplotchIndex}
             initialColors={savedEasel.colors.map((hex) => new Color(hex))}
           >
-            <LedProvier>
-              <EaselSaver />
-              <ApiProvider>
-                <LedSyncer />
-                <div className="pattern-zigzag pattern-stone-100 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
-                <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
-                  <Navbar />
-                  <Routes>
-                    <Route index element={<LightControllerPage />} />
-                    <Route path="apidocs" element={<ApiDocsPage />} />
-                    <Route
-                      path="*"
-                      element={<Navigate to="/" replace={true} />}
-                    />
-                  </Routes>
-                </div>
-              </ApiProvider>
-            </LedProvier>
+            <LedConfigProvider initial="Christmas Tree">
+              <WithLedConfig />
+            </LedConfigProvider>
           </EaselProvider>
         </BreakpointsProvider>
       </PointerProvider>
     </BrowserRouter>
+  );
+};
+
+const WithLedConfig = () => {
+  const { ledConfig } = useLedConfig();
+
+  return (
+    <LedProvier key={ledConfig.label}>
+      <EaselSaver />
+      <ApiProvider>
+        <LedSyncer />
+        <div className="pattern-zigzag pattern-stone-100 pattern-bg-white pattern-size-4 fixed top-0 right-0 bottom-0 left-0 -z-10 min-h-screen" />
+        <div className="fixed top-0 right-0 bottom-0 left-0 flex flex-col overflow-scroll">
+          <Navbar />
+          <Routes>
+            <Route index element={<LightControllerPage />} />
+            <Route path="apidocs" element={<ApiDocsPage />} />
+            <Route path="*" element={<Navigate to="/" replace={true} />} />
+          </Routes>
+        </div>
+      </ApiProvider>
+    </LedProvier>
   );
 };

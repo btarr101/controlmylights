@@ -21,7 +21,7 @@ use tower_http::{
 use tracing::Span;
 
 const LED_COUNT: usize = 150;
-const XMAS_LED_COUNT: usize = 300;
+const XMAS_LED_COUNT: usize = 500;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

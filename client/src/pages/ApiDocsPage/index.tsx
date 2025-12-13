@@ -1,87 +1,94 @@
 import { useState } from "react";
 import { ApiDocRoute } from "./ApiDocRoute";
+import { useLedConfig } from "../../contexts/LedConfigContext";
 
-export const ApiDocsPage = () => (
-  <div className="container mx-auto my-2 mb-32 flex max-w-3xl flex-1 flex-col space-y-8 px-2">
-    <ApiDocRoute
-      path="/api/leds"
-      requestType={{
-        type: "http",
-        method: "GET",
-      }}
-      description="Gets the current state of every LED."
-      buildRequestParams={() => ({
-        url: `${import.meta.env.VITE_API_BASE_URL}/leds`,
-      })}
-    />
-    <ApiDocRoute
-      path="/api/leds/:id"
-      requestType={{
-        type: "http",
-        method: "GET",
-      }}
-      description="Gets the current state of one LED."
-      params={[{ label: "id", initial: "0", description: "Index of the LED" }]}
-      buildRequestParams={({ id }) => ({
-        url: `${import.meta.env.VITE_API_BASE_URL}/leds/${id}`,
-      })}
-    />
-    <ApiDocRoute
-      path="/api/leds/:id"
-      requestType={{
-        type: "http",
-        method: "POST",
-      }}
-      description="Sets the color of a LED."
-      params={[
-        { label: "id", initial: "0", description: "Index of the LED" },
-        { label: "red", initial: "255" },
-        { label: "green", initial: "255" },
-        { label: "blue", initial: "255" },
-      ]}
-      buildRequestParams={({ id, red, green, blue }) => ({
-        url: `${import.meta.env.VITE_API_BASE_URL}/leds/${id}`,
-        body: new URLSearchParams({
-          red,
-          green,
-          blue,
-        }),
-      })}
-    />
-    <ApiDocRoute
-      path="/api/leds/ws"
-      requestType={{
-        type: "websocket",
-      }}
-      description={<WsDocRouteDescription />}
-      params={[
-        {
-          label: "colors_only",
-          initial: "false",
-          description:
-            "true/false - assumed false - if to only include colors in snapshots",
-        },
-        {
-          label: "snapshot_interval",
-          initial: "100",
-          description:
-            "Interval in ms that snapshots are sent - when there are updates. 100 is assumed and values less than 100 will be ignored.",
-        },
-      ]}
-      buildRequestParams={({ colors_only, snapshot_interval }) => {
-        const queryParams = new URLSearchParams(
-          Object.entries({
-            colors_only,
-            snapshot_interval,
-          }).filter(([, value]) => value),
-        );
-        return {
-          url: `${import.meta.env.VITE_API_BASE_URL}/leds/ws?${queryParams}`,
-        };
-      }}
-    />
-  </div>
-);
+export const ApiDocsPage = () => {
+  const { ledConfig } = useLedConfig();
+
+  return (
+    <div className="container mx-auto my-2 mb-32 flex max-w-3xl flex-1 flex-col space-y-8 px-2">
+      <ApiDocRoute
+        path={`/api${ledConfig.apiPrefix}/leds`}
+        requestType={{
+          type: "http",
+          method: "GET",
+        }}
+        description="Gets the current state of every LED."
+        buildRequestParams={() => ({
+          url: `${import.meta.env.VITE_API_BASE_URL}${ledConfig.apiPrefix}/leds`,
+        })}
+      />
+      <ApiDocRoute
+        path={`/api${ledConfig.apiPrefix}/leds/:id`}
+        requestType={{
+          type: "http",
+          method: "GET",
+        }}
+        description="Gets the current state of one LED."
+        params={[
+          { label: "id", initial: "0", description: "Index of the LED" },
+        ]}
+        buildRequestParams={({ id }) => ({
+          url: `${import.meta.env.VITE_API_BASE_URL}${ledConfig.apiPrefix}/leds/${id}`,
+        })}
+      />
+      <ApiDocRoute
+        path={`/api${ledConfig.apiPrefix}/leds/:id`}
+        requestType={{
+          type: "http",
+          method: "POST",
+        }}
+        description="Sets the color of a LED."
+        params={[
+          { label: "id", initial: "0", description: "Index of the LED" },
+          { label: "red", initial: "255" },
+          { label: "green", initial: "255" },
+          { label: "blue", initial: "255" },
+        ]}
+        buildRequestParams={({ id, red, green, blue }) => ({
+          url: `${import.meta.env.VITE_API_BASE_URL}${ledConfig.apiPrefix}/leds/${id}`,
+          body: new URLSearchParams({
+            red,
+            green,
+            blue,
+          }),
+        })}
+      />
+      <ApiDocRoute
+        path={`/api${ledConfig.apiPrefix}/leds/ws`}
+        requestType={{
+          type: "websocket",
+        }}
+        description={<WsDocRouteDescription />}
+        params={[
+          {
+            label: "colors_only",
+            initial: "false",
+            description:
+              "true/false - assumed false - if to only include colors in snapshots",
+          },
+          {
+            label: "snapshot_interval",
+            initial: "100",
+            description:
+              "Interval in ms that snapshots are sent - when there are updates. 100 is assumed and values less than 100 will be ignored.",
+          },
+        ]}
+        buildRequestParams={({ colors_only, snapshot_interval }) => {
+          const queryParams = new URLSearchParams(
+            Object.entries({
+              colors_only,
+              snapshot_interval,
+            }).filter(([, value]) => value),
+          );
+          return {
+            url: `${import.meta.env.VITE_API_BASE_URL}${ledConfig.apiPrefix}/leds/ws?${queryParams}`,
+          };
+        }}
+      />
+    </div>
+  );
+};
 
 const WsDocRouteDescription = () => {
   const [detailsExposed, setDetailsExposed] = useState(false);

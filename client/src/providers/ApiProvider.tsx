@@ -1,14 +1,12 @@
 import useWebSocket from "react-use-websocket";
-import { ApiContext, ApiState } from "../contexts/ApiContext";
+import { ApiContext, ApiState, FullApiState } from "../contexts/ApiContext";
 import { useEffect, useMemo, useState } from "react";
 import _ from "lodash";
 import { LedDTO, websocketOptions } from "../repo/api";
+import { ledConfigEntries } from "../contexts/LedConfigContext";
 
-export default function ApiProvider({ children }: React.PropsWithChildren) {
-  const { sendMessage, lastMessage } = useWebSocket(
-    `${import.meta.env.VITE_API_BASE_URL}/leds/ws`,
-    websocketOptions,
-  );
+const useApiState = (url: string) => {
+  const { sendMessage, lastMessage } = useWebSocket(url, websocketOptions);
 
   const [latestReceivedLeds, setLatestReceivedLeds] = useState<LedDTO[]>();
   useEffect(() => {
@@ -64,6 +62,19 @@ export default function ApiProvider({ children }: React.PropsWithChildren) {
       }) as ApiState,
     [latestReceivedLeds, sendMessage],
   );
+
+  return value;
+};
+
+export default function ApiProvider({ children }: React.PropsWithChildren) {
+  const value = {
+    "Christmas Tree": useApiState(
+      `${import.meta.env.VITE_API_BASE_URL}${ledConfigEntries["Christmas Tree"].apiPrefix}/leds/ws`,
+    ),
+    Shed: useApiState(
+      `${import.meta.env.VITE_API_BASE_URL}${ledConfigEntries.Shed.apiPrefix}/leds/ws`,
+    ),
+  } satisfies FullApiState;
 
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
 }

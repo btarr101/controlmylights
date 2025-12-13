@@ -3,6 +3,11 @@ import { useApi } from "../contexts/ApiContext";
 import { LedData, useLeds, useLedUpdated } from "../contexts/LedContext";
 import Color from "ts-color-class";
 import { getLeds, LedDTO } from "../repo/api";
+import { LedConfigLabel, useLedConfig } from "../contexts/LedConfigContext";
+
+export type LedSyncerProps = {
+  label: LedConfigLabel;
+};
 
 export const LedSyncer = () => {
   const { leds } = useLeds();
@@ -20,14 +25,15 @@ const transformReceivedLedDTO = ({
 });
 
 const LedSyncInitializer = () => {
+  const { ledConfig } = useLedConfig();
   const { updateLeds } = useLeds();
 
   useEffect(() => {
     (async () => {
-      const ledDTOs = await getLeds();
+      const ledDTOs = await getLeds(ledConfig.label);
       updateLeds(() => ledDTOs.map(transformReceivedLedDTO));
     })();
-  }, [updateLeds]);
+  }, [updateLeds, ledConfig.label]);
 
   return null;
 };
