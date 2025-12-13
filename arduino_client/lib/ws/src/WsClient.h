@@ -64,7 +64,7 @@ private:
 	Opcode m_receivedPayloadOpcode;
 	bool m_receivedPayloadMask;
 	uint16_t m_receivedPayloadLength;
-	byte m_receivedPayloadData[1024];
+	byte m_receivedPayloadData[4096];
 
 	bool m_handledMaskingKey = false;
 	byte m_receivedPayloadMaskingKey[4];

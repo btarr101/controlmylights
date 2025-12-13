@@ -67,7 +67,7 @@ void setupLEDS()
 	for (size_t i = 0; i < LED_COUNT; ++i) {
 		leds[i] = CRGB(255, 255, 255);
 		Log.infoln("[LEDS] Showing frame %d", i);
-		FastLED.delay(100);
+		FastLED.delay(10);
 	}
 }
 
