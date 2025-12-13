@@ -7,7 +7,6 @@ use controlmylights::{
     repo::led::LedRepo,
     routers::api,
     routes::light_bulb_generated::get_randomly_generated_light_bulb_svg,
-    state::AppState,
     tracing::{setup_tracing, TracingConfig},
     types::Color,
 };
@@ -22,6 +21,7 @@ use tower_http::{
 use tracing::Span;
 
 const LED_COUNT: usize = 150;
+const XMAS_LED_COUNT: usize = 300;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -58,15 +58,27 @@ async fn main() -> anyhow::Result<()> {
         LED_COUNT
     ]);
 
-    let state = AppState { leds: leds.clone() };
+    let xmas_leds = LedRepo::new(vec![
+        Color {
+            red: 255,
+            green: 255,
+            blue: 255
+        };
+        XMAS_LED_COUNT
+    ]);
 
     let cors = CorsLayer::new()
         .allow_methods(AllowMethods::any())
         .allow_origin(AllowOrigin::any());
 
     let router = Router::new()
-        .nest("/api", api::get_router().layer(cors))
-        .with_state(state)
+        .nest(
+            "/api",
+            Router::new()
+                .merge(api::get_router().with_state(leds))
+                .nest("/xmas", api::get_router().with_state(xmas_leds)),
+        )
+        .layer(cors)
         .route(
             "/light-bulb-generated.svg",
             get(get_randomly_generated_light_bulb_svg),

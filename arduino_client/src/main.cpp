@@ -5,7 +5,7 @@
 
 #include "logging.h"
 
-CRGB leds[LED_COUNT];
+CRGB leds[500];
 WsClient wsClient;
 
 void safeBoot();
@@ -57,14 +57,14 @@ void safeBoot()
 
 void setupLEDS()
 {
-	FastLED.addLeds<WS2811, 4, RGB>(leds, LED_COUNT);
+	FastLED.addLeds<WS2811, 4, RGB>(leds, 500);
 	FastLED.setBrightness(32);
 
-	for (size_t i = 0; i < LED_COUNT; ++i) {
+	for (size_t i = 0; i < 500; ++i) {
 		leds[i] = CRGB(0, 0, 0);
 	}
 
-	for (size_t i = 0; i < LED_COUNT; ++i) {
+	for (size_t i = 0; i < 500; ++i) {
 		leds[i] = CRGB(255, 255, 255);
 		Log.infoln("[LEDS] Showing frame %d", i);
 		FastLED.delay(100);

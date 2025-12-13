@@ -25,11 +25,10 @@ use uuid::Uuid;
 
 use crate::{
     repo::led::{Led, LedRepo, LedRepoError},
-    state::AppState,
     types::Color,
 };
 
-pub fn get_router() -> Router<AppState> {
+pub fn get_router() -> Router<LedRepo> {
     Router::new()
         .route("/leds", get(get_leds))
         .route("/leds/{id}", get(get_led).post(post_led))
